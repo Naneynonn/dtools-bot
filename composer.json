@@ -1,0 +1,7 @@
+{
+    "require": {
+        "team-reflex/discord-php": "^7.3",
+        "woeler/phpdiscord": "^4.0",
+        "predis/predis": "^2.0"
+    }
+}
