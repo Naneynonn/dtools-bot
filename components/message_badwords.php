@@ -73,40 +73,44 @@ if (!empty($settings['log_channel'])) {
   });
 }
 
+try {
+  if (isTimeTimeout(user_id: $message->author->id, warnings: $settings['automod_count'])) {
+    $message->member->timeoutMember(new Carbon($settings['automod_timeout'] . ' seconds'), 'Нецензурная брань')->done(function () use ($message, $settings, $discord, $lng) {
 
-if (isTimeTimeout(user_id: $message->author->id, warnings: $settings['automod_count'])) {
-  $message->member->timeoutMember(new Carbon($settings['automod_timeout'] . ' seconds'), 'Нецензурная брань')->done(function () use ($message, $settings, $discord, $lng) {
+      if (!empty($settings['log_channel'])) {
+        $message->guild->channels->fetch($settings['log_channel'])->done(function (Channel $channel) use ($message, $discord, $settings, $lng) {
+          $channel->webhooks->freshen()->done(function (WebhookRepository $webhooks) use ($message, $discord, $settings, $lng) {
 
-    if (!empty($settings['log_channel'])) {
-      $message->guild->channels->fetch($settings['log_channel'])->done(function (Channel $channel) use ($message, $discord, $settings, $lng) {
-        $channel->webhooks->freshen()->done(function (WebhookRepository $webhooks) use ($message, $discord, $settings, $lng) {
-
-          $wh = '';
-          foreach ($webhooks as $webhook) {
-            if ($webhook->url) {
-              $wh = $webhook->url;
-              break;
+            $wh = '';
+            foreach ($webhooks as $webhook) {
+              if ($webhook->url) {
+                $wh = $webhook->url;
+                break;
+              }
             }
-          }
 
-          if (empty($wh)) {
-            $newwebhook = $message->channel->webhooks->create([
-              'name' => 'DTools Logs',
-              'avatar' => getDecodeImage(url: $discord->user->getAvatarAttribute(format: 'png', size: 1024))
-            ]);
+            if (empty($wh)) {
+              $newwebhook = $message->channel->webhooks->create([
+                'name' => 'DTools Logs',
+                'avatar' => getDecodeImage(url: $discord->user->getAvatarAttribute(format: 'png', size: 1024))
+              ]);
 
-            $message->channel->webhooks->save($newwebhook)->done(function ($webhook) use ($message, $settings, $lng) {
-              whBadwordsTimeout(webhook: $webhook, message: $message, settings: $settings, lng: $lng);
-            });
-          }
+              $message->channel->webhooks->save($newwebhook)->done(function ($webhook) use ($message, $settings, $lng) {
+                whBadwordsTimeout(webhook: $webhook, message: $message, settings: $settings, lng: $lng);
+              });
+            }
 
-          whBadwordsTimeout(webhook: $webhook, message: $message, settings: $settings, lng: $lng);
+            whBadwordsTimeout(webhook: $webhook, message: $message, settings: $settings, lng: $lng);
+          });
         });
-      });
-    }
+      }
 
-    echo "[-] Таймаут: {$message->author->username}";
-  });
+      echo "[-] Таймаут: {$message->author->username}";
+    });
+  }
+} catch (\Throwable $th) {
+  echo 'Err: ' . $th->getMessage();
+  // throw new ErrorException($th);
 }
 
 $message->delete()->done(function () use ($message) {
