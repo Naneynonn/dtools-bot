@@ -6,9 +6,6 @@ use Discord\Repository\Channel\WebhookRepository;
 use Discord\Parts\Channel\Channel;
 use Discord\Parts\Channel\Message;
 
-// use Discord\Parts\User\Member;
-use Discord\Parts\User\Member;
-
 use Carbon\Carbon;
 
 if ($message->author?->bot) return;
