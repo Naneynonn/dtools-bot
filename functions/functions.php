@@ -8,7 +8,7 @@ function getDecodeImage(string $url): string
   return 'data:image/' . $type . ';base64,' . base64_encode($data);
 }
 
-function checkBadWords(string $message): array
+function checkBadWords(string $message): ?array
 {
   $url = 'https://api.discord.band/v1/badwords';
 
