@@ -63,9 +63,9 @@ if (!empty($settings['log_channel'])) {
         $message->channel->webhooks->save($newwebhook)->done(function ($webhook) use ($message, $lng) {
           whBadWords(webhook: $webhook, message: $message, lng: $lng);
         });
+      } else {
+        whBadWords(webhook: $webhook, message: $message, lng: $lng);
       }
-
-      whBadWords(webhook: $webhook, message: $message, lng: $lng);
     });
   });
 }
@@ -95,9 +95,9 @@ try {
               $message->channel->webhooks->save($newwebhook)->done(function ($webhook) use ($message, $settings, $lng) {
                 whBadwordsTimeout(webhook: $webhook, message: $message, settings: $settings, lng: $lng);
               });
+            } else {
+              whBadwordsTimeout(webhook: $webhook, message: $message, settings: $settings, lng: $lng);
             }
-
-            whBadwordsTimeout(webhook: $webhook, message: $message, settings: $settings, lng: $lng);
           });
         });
       }
