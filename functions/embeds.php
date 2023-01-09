@@ -3,7 +3,10 @@
 use Woeler\DiscordPhp\Message\DiscordEmbedMessage;
 use Woeler\DiscordPhp\Webhook\DiscordWebhook;
 
-function whBadWords(object $webhook, object $message, array $lng): void
+use Discord\Parts\Guild\Guild;
+use Discord\Parts\Channel\Message;
+
+function whBadWords(object $webhook, Message $message, array $lng): void
 {
   $lng = $lng['embeds'];
 
@@ -22,7 +25,7 @@ function whBadWords(object $webhook, object $message, array $lng): void
   $webhook->send($embed);
 }
 
-function whLogServer(object $guild, bool $new = true): void
+function whLogServer(Guild $guild, bool $new = true): void
 {
   if ($new) {
     $title = 'Новый сервер';
@@ -43,7 +46,7 @@ function whLogServer(object $guild, bool $new = true): void
   $webhook->send($embed);
 }
 
-function whErrLogServer(object $guild): void
+function whErrLogServer(Guild $guild): void
 {
 
   $embed = (new DiscordEmbedMessage())
@@ -55,7 +58,7 @@ function whErrLogServer(object $guild): void
   $webhook->send($embed);
 }
 
-function whBadwordsTimeout(object $webhook, object $message, array $settings, array $lng): void
+function whBadwordsTimeout(object $webhook, Message $message, array $settings, array $lng): void
 {
   $lng_all = $lng;
   $lng = $lng['embeds'];
