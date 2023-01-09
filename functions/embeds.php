@@ -6,7 +6,7 @@ use Woeler\DiscordPhp\Webhook\DiscordWebhook;
 use Discord\Parts\Guild\Guild;
 use Discord\Parts\Channel\Message;
 
-function whBadWords(object $webhook, Message $message, array $lng): void
+function whLog(object $webhook, Message $message, array $lng, string $reason): void
 {
   $lng = $lng['embeds'];
 
@@ -16,7 +16,7 @@ function whBadWords(object $webhook, Message $message, array $lng): void
     ->addField($lng['channel'], "{$message->channel}", true)
     ->addField($lng['author'], "{$message->author} | `{$message->author->username}#{$message->author->discriminator}`", true)
     ->addField($lng['msg-content'], ">>> {$message->content}", false)
-    ->addField($lng['reason'], '> ' . $lng['foul-lang'], false)
+    ->addField($lng['reason'], '> ' . $reason, false)
     ->setFooterText($lng['msg-id'] . ": {$message->id}")
     ->setColor(13974845)
     ->setTimestamp(new DateTime());
@@ -58,7 +58,7 @@ function whErrLogServer(Guild $guild): void
   $webhook->send($embed);
 }
 
-function whBadwordsTimeout(object $webhook, Message $message, array $settings, array $lng): void
+function whLogTimeout(object $webhook, Message $message, array $lng, string $reason, int $count, int $timeout): void
 {
   $lng_all = $lng;
   $lng = $lng['embeds'];
@@ -67,8 +67,8 @@ function whBadwordsTimeout(object $webhook, Message $message, array $settings, a
     ->setAuthorName($lng['mute-user'])
     ->setAuthorIcon('https://media.discordapp.net/attachments/686585233339842572/708784067684073492/member_gray_ban_red.png')
     ->addField($lng['author'], "{$message->author} | `{$message->author->username}#{$message->author->discriminator}`", true)
-    ->addField($lng['duration'], gmdate("H:i:s", $settings['automod_timeout']), true)
-    ->addField($lng['reason'], sprintf('> ' . $lng['foul-lang'] . ', ' . $lng['violations'], $settings['automod_count'], getNormalEndByLang(num: $settings['automod_count'], name: 'violations', lng: $lng_all)), false)
+    ->addField($lng['duration'], gmdate("H:i:s", $timeout), true)
+    ->addField($lng['reason'], sprintf('> ' . $reason . ', ' . $lng['violations'], $count, getNormalEndByLang(num: $count, name: 'violations', lng: $lng_all)), false)
     ->setFooterText($lng['user-id'] . ": {$message->author->id}")
     ->setColor(13974845)
     ->setTimestamp(new DateTime());
