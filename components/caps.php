@@ -10,6 +10,8 @@ use Carbon\Carbon;
 
 if (!$settings['is_caps_status']) return;
 
+if (mb_strlen($message->content) <= 3) return;
+
 $percent = getTextPercent(text: $message->content);
 
 if ($percent < $settings['caps_percent']) return;
