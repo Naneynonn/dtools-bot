@@ -1,5 +1,8 @@
 <?php
 
+use Discord\Discord;
+use Discord\Parts\Channel\Message;
+
 function getDecodeImage(string $url): string
 {
   $path = $url;
@@ -33,9 +36,9 @@ function checkBadWords(string $message): ?array
   return $results;
 }
 
-function isTimeTimeout(string $user_id, int $warnings = 5, int $time = 600): bool
+function isTimeTimeout(string $user_id, int $warnings, bool $status, int $time): bool
 {
-  if ($warnings === 0) return false;
+  if (!$status) return false;
 
   $client = new Predis\Client();
   $key = "bot:badwords:{$user_id}";
@@ -75,4 +78,42 @@ function getNormalEndByLang(int $num, string $name, array $lng): string
   if ($num_x == 1) return $lng['count'][$name][1]; // иначе если оканчивается на 1
 
   return $lng['count'][$name][5];
+}
+
+function getLang(string $lang): array
+{
+  if (file_exists('lang/' . $lang . '.php')) {
+    $lang = array_merge_recursive(require 'lang/global.php', require 'lang/' . $lang . '.php');
+  } else {
+    $lang = array_merge_recursive(require 'lang/global.php', require 'lang/en.php');
+  }
+
+  return $lang;
+}
+
+function getOneWebhook(object $webhooks): object|false
+{
+  $wh = false;
+
+  foreach ($webhooks as $webhook) {
+    if ($webhook->url) {
+      // $wh = $webhook->url;
+      $wh = $webhook;
+      break;
+    }
+  }
+
+  return $wh;
+}
+
+function createLogWebhook(Message $message, Discord $discord, array $settings, array $lng): void
+{
+  $create = $message->channel->webhooks->create([
+    'name' => $lng['wh_log_name'],
+    'avatar' => getDecodeImage(url: $discord->user->getAvatarAttribute(format: 'png', size: 1024))
+  ]);
+
+  $message->channel->webhooks->save($create)->done(function ($webhook) use ($message, $settings, $lng) {
+    whBadwordsTimeout(webhook: $webhook, message: $message, settings: $settings, lng: $lng);
+  });
 }
