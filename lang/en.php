@@ -5,6 +5,10 @@
     'delete' => '%s, Don\'t use foul language!'
   ],
 
+  'caps' => [
+    'delete' => '%s, don\'t use so many caps!'
+  ],
+
   'embeds' => [
     'msg-delete' => 'Message deleted',
     'channel' => 'Channel',
@@ -16,7 +20,9 @@
     'mute-user' => 'User is punished',
     'duration' => 'Duration',
     'violations' => '%s %s',
-    'user-id' => 'User ID'
+    'user-id' => 'User ID',
+    'abuse-caps' => 'Abuse of caps, %s%%',
+    'caps' => 'Abuse of caps'
   ],
 
   'count' => [

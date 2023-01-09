@@ -8,12 +8,7 @@ use Discord\Parts\Channel\Message;
 
 use Carbon\Carbon;
 
-if ($message->author?->bot) return;
-
-// Load Settings
-$model = new DB();
-$settings = $model->getSettingsServer(id: $message->guild->id);
-if (!$settings) return;
+if (!$settings['is_bw_status']) return;
 
 // Load BadWords Exceptions
 $skip = $model->getBadWordsExeption(id: $message->guild->id);
@@ -22,10 +17,7 @@ else $skip = implode(', ', array_map(function ($entry) {
   return $entry['word'];
 }, $skip));
 
-// Load Lang
-$lng = getLang(lang: $settings['lang']);
 
-if (!$message->content) return;
 $badword = checkBadWords(message: $message->content, skip: $skip)['badwords'];
 if (!$badword) return;
 
@@ -63,20 +55,20 @@ if (!empty($settings['log_channel'])) {
         ]);
 
         $message->channel->webhooks->save($create)->done(function ($webhook) use ($message, $lng) {
-          whBadWords(webhook: $webhook, message: $message, lng: $lng);
+          whLog(webhook: $webhook, message: $message, lng: $lng, reason: $lng['embeds']['foul-lang']);
         });
       } else {
-        whBadWords(webhook: $webhook, message: $message, lng: $lng);
+        whLog(webhook: $webhook, message: $message, lng: $lng, reason: $lng['embeds']['foul-lang']);
       }
     });
   });
 }
 
 try {
-  $is_timeout = isTimeTimeout(user_id: $message->author->id, warnings: $settings['bw_warn_count'], status: $settings['is_bw_status'], time: $settings['bw_time_check']);
+  $is_timeout = isTimeTimeout(user_id: $message->author->id, warnings: $settings['bw_warn_count'], status: $settings['is_bw_timeout_status'], time: $settings['bw_time_check'], module: 'badwords');
 
   if ($is_timeout) {
-    $message->member->timeoutMember(new Carbon($settings['bw_timeout'] . ' seconds'), $lng['foul-lang'])->done(function () use ($message, $settings, $discord, $lng) {
+    $message->member->timeoutMember(new Carbon($settings['bw_timeout'] . ' seconds'), $lng['embeds']['foul-lang'])->done(function () use ($message, $settings, $discord, $lng) {
 
       if (!empty($settings['log_channel'])) {
         $message->guild->channels->fetch($settings['log_channel'])->done(function (Channel $channel) use ($message, $discord, $settings, $lng) {
@@ -91,16 +83,16 @@ try {
               ]);
 
               $message->channel->webhooks->save($create)->done(function ($webhook) use ($message, $settings, $lng) {
-                whBadwordsTimeout(webhook: $webhook, message: $message, settings: $settings, lng: $lng);
+                whLogTimeout(webhook: $webhook, message: $message, lng: $lng, reason: $lng['embeds']['foul-lang'], count: $settings['bw_warn_count'], timeout: $settings['bw_timeout']);
               });
             } else {
-              whBadwordsTimeout(webhook: $webhook, message: $message, settings: $settings, lng: $lng);
+              whLogTimeout(webhook: $webhook, message: $message, lng: $lng, reason: $lng['embeds']['foul-lang'], count: $settings['bw_warn_count'], timeout: $settings['bw_timeout']);
             }
           });
         });
       }
 
-      echo "[-] Таймаут: {$message->author->username}";
+      echo "[-] Caps | Таймаут: {$message->author->username}";
     });
   }
 } catch (\Throwable $th) {
@@ -109,7 +101,7 @@ try {
 }
 
 $message->delete()->done(function () use ($message) {
-  echo "[-] Удалено: {$message->content}";
+  echo "[-] BadWords | Удалено: {$message->content}";
 });
 
 $del_msg = MessageBuilder::new()
