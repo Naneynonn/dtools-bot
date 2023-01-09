@@ -15,11 +15,17 @@ $model = new DB();
 $settings = $model->getSettingsServer(id: $message->guild->id);
 if (!$settings) return;
 
+$skip = $model->getBadWordsExeption(id: $message->guild->id);
+if (!$skip) $skip = '';
+else $skip = implode(', ', array_map(function ($entry) {
+  return $entry['word'];
+}, $skip));
+
 // Load Lang
 $lng = getLang(lang: $settings['lang']);
 
 if (!$message->content) return;
-$badword = checkBadWords(message: $message->content)['badwords'];
+$badword = checkBadWords(message: $message->content, skip: $skip)['badwords'];
 if (!$badword) return;
 
 if (!empty($settings['ignored_roles'])) {

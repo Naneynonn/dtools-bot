@@ -11,13 +11,14 @@ function getDecodeImage(string $url): string
   return 'data:image/' . $type . ';base64,' . base64_encode($data);
 }
 
-function checkBadWords(string $message): ?array
+function checkBadWords(string $message, string $skip): ?array
 {
   $url = 'https://api.discord.band/v1/badwords';
 
   $body = [
     "message" => $message,
-    "type" => 1
+    "type" => 1,
+    "skip" => $skip
   ];
   $response_json = json_encode($body, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 

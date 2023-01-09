@@ -17,6 +17,14 @@ class DB
     return $sql->fetch();
   }
 
+  public function getBadWordsExeption(string $id): array|false
+  {
+    $sql = $this->db->prepare("SELECT * FROM badwords_exception WHERE server_id = ?");
+    $sql->execute([$id]);
+
+    return $sql->fetchAll();
+  }
+
   public function updateGuildInfo(string $name, bool $is_active, ?string $icon, int $members_online, int $members_all, string $server_id): void
   {
     $sql = $this->db->prepare("UPDATE servers SET name = :name, is_active = :is_active, icon = :icon, members_online = :members_online, members_all = :members_all WHERE server_id = :server_id");
