@@ -10,11 +10,12 @@ use Carbon\Carbon;
 
 if ($message->author?->bot) return;
 
-// Load DB
+// Load Settings
 $model = new DB();
 $settings = $model->getSettingsServer(id: $message->guild->id);
 if (!$settings) return;
 
+// Load BadWords Exceptions
 $skip = $model->getBadWordsExeption(id: $message->guild->id);
 if (!$skip) $skip = '';
 else $skip = implode(', ', array_map(function ($entry) {
@@ -75,7 +76,7 @@ try {
   $is_timeout = isTimeTimeout(user_id: $message->author->id, warnings: $settings['bw_warn_count'], status: $settings['is_bw_status'], time: $settings['bw_time_check']);
 
   if ($is_timeout) {
-    $message->member->timeoutMember(new Carbon($settings['bw_timeout'] . ' seconds'), 'Нецензурная брань')->done(function () use ($message, $settings, $discord, $lng) {
+    $message->member->timeoutMember(new Carbon($settings['bw_timeout'] . ' seconds'), $lng['foul-lang'])->done(function () use ($message, $settings, $discord, $lng) {
 
       if (!empty($settings['log_channel'])) {
         $message->guild->channels->fetch($settings['log_channel'])->done(function (Channel $channel) use ($message, $discord, $settings, $lng) {
