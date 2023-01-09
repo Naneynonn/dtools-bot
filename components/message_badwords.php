@@ -10,12 +10,13 @@ use Carbon\Carbon;
 
 if ($message->author?->bot) return;
 
+// Load DB
 $model = new DB();
 $settings = $model->getSettingsServer(id: $message->guild->id);
 if (!$settings) return;
 
-$lng = array_merge_recursive(require 'lang/global.php', require 'lang/' . $settings['lang'] . '.php');
-
+// Load Lang
+$lng = getLang(lang: $settings['lang']);
 
 if (!$message->content) return;
 $badword = checkBadWords(message: $message->content)['badwords'];
@@ -46,21 +47,15 @@ if (!empty($settings['log_channel'])) {
   $message->guild->channels->fetch($settings['log_channel'])->done(function (Channel $channel) use ($message, $discord, $lng) {
     $channel->webhooks->freshen()->done(function (WebhookRepository $webhooks) use ($message, $discord, $lng) {
 
-      $wh = '';
-      foreach ($webhooks as $webhook) {
-        if ($webhook->url) {
-          $wh = $webhook->url;
-          break;
-        }
-      }
+      $webhook = getOneWebhook(webhooks: $webhooks);
 
-      if (empty($wh)) {
-        $newwebhook = $message->channel->webhooks->create([
-          'name' => 'DTools Logs',
+      if (!$webhook) {
+        $create = $message->channel->webhooks->create([
+          'name' => $lng['wh_log_name'],
           'avatar' => getDecodeImage(url: $discord->user->getAvatarAttribute(format: 'png', size: 1024))
         ]);
 
-        $message->channel->webhooks->save($newwebhook)->done(function ($webhook) use ($message, $lng) {
+        $message->channel->webhooks->save($create)->done(function ($webhook) use ($message, $lng) {
           whBadWords(webhook: $webhook, message: $message, lng: $lng);
         });
       } else {
@@ -71,28 +66,24 @@ if (!empty($settings['log_channel'])) {
 }
 
 try {
-  if (isTimeTimeout(user_id: $message->author->id, warnings: $settings['automod_count'])) {
-    $message->member->timeoutMember(new Carbon($settings['automod_timeout'] . ' seconds'), 'Нецензурная брань')->done(function () use ($message, $settings, $discord, $lng) {
+  $is_timeout = isTimeTimeout(user_id: $message->author->id, warnings: $settings['bw_warn_count'], status: $settings['is_bw_status'], time: $settings['bw_time_check']);
+
+  if ($is_timeout) {
+    $message->member->timeoutMember(new Carbon($settings['bw_timeout'] . ' seconds'), 'Нецензурная брань')->done(function () use ($message, $settings, $discord, $lng) {
 
       if (!empty($settings['log_channel'])) {
         $message->guild->channels->fetch($settings['log_channel'])->done(function (Channel $channel) use ($message, $discord, $settings, $lng) {
           $channel->webhooks->freshen()->done(function (WebhookRepository $webhooks) use ($message, $discord, $settings, $lng) {
 
-            $wh = '';
-            foreach ($webhooks as $webhook) {
-              if ($webhook->url) {
-                $wh = $webhook->url;
-                break;
-              }
-            }
+            $webhook = getOneWebhook(webhooks: $webhooks);
 
-            if (empty($wh)) {
-              $newwebhook = $message->channel->webhooks->create([
-                'name' => 'DTools Logs',
+            if (!$webhook) {
+              $create = $message->channel->webhooks->create([
+                'name' => $lng['wh_log_name'],
                 'avatar' => getDecodeImage(url: $discord->user->getAvatarAttribute(format: 'png', size: 1024))
               ]);
 
-              $message->channel->webhooks->save($newwebhook)->done(function ($webhook) use ($message, $settings, $lng) {
+              $message->channel->webhooks->save($create)->done(function ($webhook) use ($message, $settings, $lng) {
                 whBadwordsTimeout(webhook: $webhook, message: $message, settings: $settings, lng: $lng);
               });
             } else {
