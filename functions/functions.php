@@ -37,12 +37,12 @@ function checkBadWords(string $message, string $skip): ?array
   return $results;
 }
 
-function isTimeTimeout(string $user_id, int $warnings, bool $status, int $time): bool
+function isTimeTimeout(string $user_id, int $warnings, bool $status, int $time, string $module): bool
 {
   if (!$status) return false;
 
   $client = new Predis\Client();
-  $key = "bot:badwords:{$user_id}";
+  $key = "bot:{$module}:{$user_id}";
 
   if ($client->exists(key: $key)) {
     $count = $client->incr(key: $key);
@@ -107,14 +107,8 @@ function getOneWebhook(object $webhooks): object|false
   return $wh;
 }
 
-function createLogWebhook(Message $message, Discord $discord, array $settings, array $lng): void
+function getTextPercent(string $text): float
 {
-  $create = $message->channel->webhooks->create([
-    'name' => $lng['wh_log_name'],
-    'avatar' => getDecodeImage(url: $discord->user->getAvatarAttribute(format: 'png', size: 1024))
-  ]);
-
-  $message->channel->webhooks->save($create)->done(function ($webhook) use ($message, $settings, $lng) {
-    whBadwordsTimeout(webhook: $webhook, message: $message, settings: $settings, lng: $lng);
-  });
+  preg_match_all('/[А-ЯA-Z]/u', $text, $matches);
+  return round(count($matches[0]) / mb_strlen($text) * 100, 2);
 }
