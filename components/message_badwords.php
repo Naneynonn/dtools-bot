@@ -25,9 +25,9 @@ if (!empty($settings['ignored_roles'])) {
   $roles = false;
   $settings['ignored_roles'] = json_decode($settings['ignored_roles']);
 
-  if ($message->author->roles) {
+  if ($message->member->roles) {
     foreach ($settings['ignored_roles'] as $role) {
-      if ($message->author->roles->has($role)) {
+      if ($message->member->roles->has($role)) {
         $roles = true;
       }
     }
