@@ -112,3 +112,9 @@ function getTextPercent(string $text): float
   preg_match_all('/[А-ЯA-Z]/u', $text, $matches);
   return round(count($matches[0]) / mb_strlen($text) * 100, 2);
 }
+
+function getReplaceLetters(string $text): bool
+{
+  // return preg_match('/(?=[а-яА-ЯёЁ]*[a-zA-Z])(?=[a-zA-Z]*[а-яА-ЯёЁ])[\wа-яА-ЯёЁ]+/u', $text) ? true : false;
+  return preg_match('/(?=[а-яА-ЯёЁ0-9]*[a-zA-Z])(?=[a-zA-Z0-9]*[а-яА-ЯёЁ])[\wа-яА-ЯёЁ0-9]+/u', $text) ? true : false;
+}
