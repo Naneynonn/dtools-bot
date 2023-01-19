@@ -116,5 +116,5 @@ function getTextPercent(string $text): float
 function getReplaceLetters(string $text): bool
 {
   // return preg_match('/(?=[а-яА-ЯёЁ]*[a-zA-Z])(?=[a-zA-Z]*[а-яА-ЯёЁ])[\wа-яА-ЯёЁ]+/u', $text) ? true : false;
-  return preg_match('/(?=[а-яА-ЯёЁ0-9]*[a-zA-Z])(?=[a-zA-Z0-9]*[а-яА-ЯёЁ])[\wа-яА-ЯёЁ0-9]+/u', $text) ? true : false;
+  return preg_match('/(?=[а-яА-ЯёЁ0-9]*[a-zA-Z])(?=[a-zA-Z0-9]*[а-яА-ЯёЁ0-9])[\wа-яА-ЯёЁ0-9]+/u', $text) ? true : false;
 }
