@@ -9,6 +9,10 @@
     'delete' => '%s, don\'t use so many caps!'
   ],
 
+  'replace' => [
+    'delete' => '%s, don\'t use replacement characters!'
+  ],
+
   'embeds' => [
     'msg-delete' => 'Message deleted',
     'channel' => 'Channel',
@@ -22,7 +26,8 @@
     'violations' => '%s %s',
     'user-id' => 'User ID',
     'abuse-caps' => 'Abuse of caps, %s%%',
-    'caps' => 'Abuse of caps'
+    'caps' => 'Abuse of caps',
+    'find-replace' => 'Similar symbols'
   ],
 
   'count' => [
