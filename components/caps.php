@@ -9,6 +9,7 @@ use Discord\Parts\Channel\Message;
 use Carbon\Carbon;
 
 if (!$settings['is_caps_status']) return;
+if ($stop) return;
 
 if (mb_strlen($message->content) <= 3) return;
 
@@ -18,11 +19,10 @@ if ($percent < $settings['caps_percent']) return;
 
 if (!empty($settings['ignored_roles'])) {
   $roles = false;
-  $settings['ignored_roles'] = json_decode($settings['ignored_roles']);
 
-  if ($message->author->roles) {
+  if ($message->member->roles) {
     foreach ($settings['ignored_roles'] as $role) {
-      if ($message->author->roles->has($role)) {
+      if ($message->member->roles->has($role)) {
         $roles = true;
       }
     }
@@ -32,8 +32,6 @@ if (!empty($settings['ignored_roles'])) {
 }
 
 if (!empty($settings['ignored_channels'])) {
-  $settings['ignored_channels'] = json_decode($settings['ignored_channels']);
-
   if (in_array($message->channel->id, $settings['ignored_channels'])) return;
 }
 
@@ -107,3 +105,5 @@ $message->channel->sendMessage($del_msg)->done(function (Message $message) {
   $message->delayedDelete(2500)->done(function () {
   });
 });
+
+$stop = true;
