@@ -27,7 +27,13 @@ $discord->on('ready', function (Discord $discord) use ($starttime) {
   $lng = require 'lang/global.php';
 
   $endtime = number_format(microtime(true) - $starttime, 2);
-  echo "Logged in as \n{$discord->user->username} \n{$discord->user->id} \nStarted in {$endtime}sec \n------";
+  $guilds_count = $discord->guilds->count();
+  $memory_use = convert(memory_get_usage(true));
+  $users_count = $discord->users->count();
+  $channels_count = getGuildsChannels(discord: $discord);
+
+
+  echo "Logged in as \n{$discord->user->username} \n{$discord->user->id} \n------ \nGuilds: {$guilds_count} \nAll channels: {$channels_count} \nUsers: {$users_count} \nMemory use: {$memory_use} \n------ \nStarted in {$endtime}s \n------";
 
   $activity = $discord->factory(Activity::class, [
     'name' => $lng['activity'],
@@ -39,6 +45,12 @@ $discord->on('ready', function (Discord $discord) use ($starttime) {
   foreach (glob("events/*.php") as $filename) {
     require_once $filename;
   }
+});
+
+$discord->on('reconnected', function () use ($starttime) {
+  $endtime = number_format(microtime(true) - $starttime, 2);
+
+  echo "Reconnected \nWork time {$endtime}s \n------";
 });
 
 $discord->run();

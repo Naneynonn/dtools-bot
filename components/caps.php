@@ -95,7 +95,7 @@ try {
 }
 
 $message->delete()->done(function () use ($message) {
-  echo "[-] Caps | Удалено: {$message->content}";
+  echo "[-] Caps | Удалено: {$message->content} | " . convert(memory_get_usage(true));
 });
 
 $del_msg = MessageBuilder::new()

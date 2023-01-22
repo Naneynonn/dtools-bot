@@ -115,6 +115,21 @@ function getTextPercent(string $text): float
 
 function getReplaceLetters(string $text): bool
 {
-  // return preg_match('/(?=[а-яА-ЯёЁ]*[a-zA-Z])(?=[a-zA-Z]*[а-яА-ЯёЁ])[\wа-яА-ЯёЁ]+/u', $text) ? true : false;
-  return preg_match('/(?=[а-яА-ЯёЁ0-9]*[a-zA-Z])(?=[a-zA-Z0-9]*[а-яА-ЯёЁ0-9])[\wа-яА-ЯёЁ0-9]+/u', $text) ? true : false;
+  return preg_match('/(?=[а-яА-ЯёЁ]*[a-zA-Z])(?=[a-zA-Z]*[а-яА-ЯёЁ])[\wа-яА-ЯёЁ]+/u', $text) ? true : false;
+}
+
+function convert($size)
+{
+  $unit = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+  return @round($size / pow(1024, ($i = floor(log($size, 1024)))), 2) . ' ' . $unit[$i];
+}
+
+function getGuildsChannels(Discord $discord): string
+{
+  $channels_count = 0;
+  foreach ($discord->guilds as $guild) {
+    $channels_count += $guild->channels->count();
+  }
+
+  return $channels_count;
 }

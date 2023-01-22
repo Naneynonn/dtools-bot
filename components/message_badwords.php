@@ -99,7 +99,7 @@ try {
 }
 
 $message->delete()->done(function () use ($message) {
-  echo "[-] BadWords | Удалено: {$message->content}";
+  echo "[-] BadWords | Удалено: {$message->content} | " . convert(memory_get_usage(true));
 });
 
 $del_msg = MessageBuilder::new()
