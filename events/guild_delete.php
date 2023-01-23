@@ -13,4 +13,6 @@ $discord->on(Event::GUILD_DELETE, function (object $guild, Discord $discord, boo
     $model->updateGuildInfo(name: $guild->name, is_active: false, icon: $guild->icon_hash, members_online: 0, members_all: $guild->member_count, server_id: $guild->id);
     whLogServer(guild: $guild, new: false);
   }
+
+  unset($model);
 });

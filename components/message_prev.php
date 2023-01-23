@@ -17,3 +17,5 @@ $lng = getLang(lang: $settings['lang']);
 require 'components/caps.php';
 require 'components/replace.php';
 require 'components/message_badwords.php';
+
+unset($model);
