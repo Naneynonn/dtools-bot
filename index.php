@@ -32,8 +32,7 @@ $discord->on('ready', function (Discord $discord) use ($starttime) {
   $users_count = $discord->users->count();
   $channels_count = getGuildsChannels(discord: $discord);
 
-
-  echo "Logged in as \n{$discord->user->username} \n{$discord->user->id} \n------ \nGuilds: {$guilds_count} \nAll channels: {$channels_count} \nUsers: {$users_count} \nMemory use: {$memory_use} \n------ \nStarted in {$endtime}s \n------";
+  echo "\n------ \nLogged in as \n{$discord->user->username} \n{$discord->user->id} \n------ \nGuilds: {$guilds_count} \nAll channels: {$channels_count} \nUsers: {$users_count} \nMemory use: {$memory_use} \n------ \nStarted in {$endtime}s \n------";
 
   $activity = $discord->factory(Activity::class, [
     'name' => $lng['activity'],
@@ -47,10 +46,8 @@ $discord->on('ready', function (Discord $discord) use ($starttime) {
   }
 });
 
-$discord->on('reconnected', function () use ($starttime) {
-  $endtime = number_format(microtime(true) - $starttime, 2);
-
-  echo "Reconnected \nWork time {$endtime}s \n------";
+$discord->on('reconnected', function () {
+  echo "\n------ \nReconnected \nWork time {$endtime} \n------";
 });
 
 $discord->run();
