@@ -47,7 +47,7 @@ $discord->on('ready', function (Discord $discord) use ($starttime) {
 });
 
 $discord->on('reconnected', function () {
-  echo "\n------ \nReconnected \nWork time {$endtime} \n------";
+  echo "\n------ \nReconnected \n------";
 });
 
 $discord->run();
