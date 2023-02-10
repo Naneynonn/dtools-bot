@@ -44,6 +44,8 @@ $discord->on('ready', function (Discord $discord) use ($starttime) {
   foreach (glob("events/*.php") as $filename) {
     require_once $filename;
   }
+
+  require 'setup.php';
 });
 
 $discord->on('reconnected', function () {

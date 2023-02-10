@@ -116,7 +116,10 @@ function getTextPercent(string $text): float
 function getReplaceLetters(string $text): bool
 {
   // return preg_match('/(?=[а-яА-ЯёЁ]*[a-zA-Z])(?=[a-zA-Z]*[а-яА-ЯёЁ])[\wа-яА-ЯёЁ]+/u', $text) ? true : false;
-  return preg_match('/[\wа-яА-ЯёЁ]+(?=[а-яА-ЯёЁ]*[a-zA-Z])(?=[a-zA-Z]*[а-яА-ЯёЁ])[\wа-яА-ЯёЁ]+/u', $text) ? true : false;
+
+  // LAST WORK
+  // return preg_match('/[\wа-яА-ЯёЁ]+(?=[а-яА-ЯёЁ]*[a-zA-Z])(?=[a-zA-Z]*[а-яА-ЯёЁ])[\wа-яА-ЯёЁ]+/u', $text) ? true : false;
+  return preg_match('/\b(?=\w*[а-яА-Я])(?=\w*[a-zA-Z])\w*\b/u', $text) ? true : false;
 }
 
 function convert($size)
@@ -133,4 +136,64 @@ function getGuildsChannels(Discord $discord): string
   }
 
   return $channels_count;
+}
+
+function getIgnoredPermissions(?array $perm, Message $message, string $selection): bool
+{
+  $type = [
+    'channel' => 1,
+    'role' => 2,
+    'user' => 3,
+    'category' => 4
+  ];
+
+  if (!$perm) return false;
+
+  $roles = array_filter($perm, fn ($item) => $item['type'] === $type['role']);
+  $channels = array_filter($perm, fn ($item) => $item['type'] === $type['channel']);
+  $users = array_filter($perm, fn ($item) => $item['type'] === $type['user']);
+  $category = array_filter($perm, fn ($item) => $item['type'] === $type['category']);
+
+  $roleIds = array_map(
+    fn ($item) => $item['entity_id'],
+    array_filter($roles, fn ($item) => $item['selection'] === $selection)
+  );
+  $channelIds = array_map(
+    fn ($item) => $item['entity_id'],
+    array_filter($channels, fn ($item) => $item['selection'] === $selection)
+  );
+  $userIds = array_map(
+    fn ($item) => $item['entity_id'],
+    array_filter($users, fn ($item) => $item['selection'] === $selection)
+  );
+  $categoryIds = array_map(
+    fn ($item) => $item['entity_id'],
+    array_filter($category, fn ($item) => $item['selection'] === $selection)
+  );
+
+  if (!empty($roles)) {
+    $check_roles = false;
+
+    if (!$message->member->roles) return false;
+
+    foreach ($roleIds as $role) {
+      if ($message->member->roles->has($role)) $check_roles = true;
+    }
+
+    if ($check_roles) return true;
+  }
+
+  if (!empty($channels)) {
+    if (in_array($message->channel->id, $channelIds)) return true;
+  }
+
+  if (!empty($users)) {
+    if (in_array($message->member->id, $userIds)) return true;
+  }
+
+  if (!empty($category)) {
+    if (in_array($message->channel->parent_id, $categoryIds)) return true;
+  }
+
+  return false;
 }

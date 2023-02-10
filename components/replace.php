@@ -15,23 +15,7 @@ $replace = getReplaceLetters(text: $message->content);
 
 if (!$replace) return;
 
-if (!empty($settings['ignored_roles'])) {
-  $roles = false;
-
-  if ($message->member->roles) {
-    foreach ($settings['ignored_roles'] as $role) {
-      if ($message->member->roles->has($role)) {
-        $roles = true;
-      }
-    }
-  }
-
-  if ($roles) return;
-}
-
-if (!empty($settings['ignored_channels'])) {
-  if (in_array($message->channel->id, $settings['ignored_channels'])) return;
-}
+if (getIgnoredPermissions(perm: $perm, message: $message, selection: 'replace')) return;
 
 if (!empty($settings['log_channel'])) {
   $message->guild->channels->fetch($settings['log_channel'])->done(function (Channel $channel) use ($message, $discord, $lng) {

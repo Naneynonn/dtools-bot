@@ -22,23 +22,7 @@ else $skip = implode(', ', array_map(function ($entry) {
 $badword = checkBadWords(message: $message->content, skip: $skip)['badwords'];
 if (!$badword) return;
 
-if (!empty($settings['ignored_roles'])) {
-  $roles = false;
-
-  if ($message->member->roles) {
-    foreach ($settings['ignored_roles'] as $role) {
-      if ($message->member->roles->has($role)) {
-        $roles = true;
-      }
-    }
-  }
-
-  if ($roles) return;
-}
-
-if (!empty($settings['ignored_channels'])) {
-  if (in_array($message->channel->id, $settings['ignored_channels'])) return;
-}
+if (getIgnoredPermissions(perm: $perm, message: $message, selection: 'badwords')) return;
 
 if (!empty($settings['log_channel'])) {
   $message->guild->channels->fetch($settings['log_channel'])->done(function (Channel $channel) use ($message, $discord, $lng) {

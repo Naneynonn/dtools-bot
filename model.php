@@ -58,4 +58,12 @@ class DB
 
     $sql->execute();
   }
+
+  public function getServerPerm(string $id, string $module): array|false
+  {
+    $sql = $this->db->prepare("SELECT * FROM permissions WHERE server_id = ? AND module = ?");
+    $sql->execute([$id, $module]);
+
+    return $sql->fetchAll();
+  }
 }

@@ -8,8 +8,8 @@ $model = new DB();
 $settings = $model->getSettingsServer(id: $message->guild->id);
 if (!$settings || !$settings['is_enable']) return;
 
-$settings['ignored_roles'] = json_decode($settings['ignored_roles']);
-$settings['ignored_channels'] = json_decode($settings['ignored_channels']);
+$perm = $model->getServerPerm(id: $message->guild->id, module: 'automod');
+if (getIgnoredPermissions(perm: $perm, message: $message, selection: 'all')) return;
 
 // Load Lang
 $lng = getLang(lang: $settings['lang']);
