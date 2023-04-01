@@ -21,17 +21,17 @@ if (getIgnoredPermissions(perm: $perm, message: $message, selection: 'caps')) re
 
 if (!empty($settings['log_channel'])) {
   $message->guild->channels->fetch($settings['log_channel'])->done(function (Channel $channel) use ($message, $discord, $lng, $settings) {
-    $channel->webhooks->freshen()->done(function (WebhookRepository $webhooks) use ($message, $discord, $lng, $settings) {
+    $channel->webhooks->freshen()->done(function (WebhookRepository $webhooks) use ($message, $discord, $lng, $settings, $channel) {
 
       $webhook = getOneWebhook(webhooks: $webhooks);
 
       if (!$webhook) {
-        $create = $message->channel->webhooks->create([
+        $create = $channel->webhooks->create([
           'name' => $lng['wh_log_name'],
           'avatar' => getDecodeImage(url: $discord->user->getAvatarAttribute(format: 'png', size: 1024))
         ]);
 
-        $message->channel->webhooks->save($create)->done(function ($webhook) use ($message, $lng, $settings) {
+        $channel->webhooks->save($create)->done(function ($webhook) use ($message, $lng, $settings) {
           whLog(webhook: $webhook, message: $message, lng: $lng, reason: sprintf($lng['embeds']['abuse-caps'], $settings['caps_percent']));
         });
       } else {
@@ -50,17 +50,17 @@ try {
 
       if (!empty($settings['log_channel'])) {
         $message->guild->channels->fetch($settings['log_channel'])->done(function (Channel $channel) use ($message, $discord, $settings, $lng) {
-          $channel->webhooks->freshen()->done(function (WebhookRepository $webhooks) use ($message, $discord, $settings, $lng) {
+          $channel->webhooks->freshen()->done(function (WebhookRepository $webhooks) use ($message, $discord, $settings, $lng, $channel) {
 
             $webhook = getOneWebhook(webhooks: $webhooks);
 
             if (!$webhook) {
-              $create = $message->channel->webhooks->create([
+              $create = $channel->webhooks->create([
                 'name' => $lng['wh_log_name'],
                 'avatar' => getDecodeImage(url: $discord->user->getAvatarAttribute(format: 'png', size: 1024))
               ]);
 
-              $message->channel->webhooks->save($create)->done(function ($webhook) use ($message, $settings, $lng) {
+              $channel->webhooks->save($create)->done(function ($webhook) use ($message, $settings, $lng) {
                 whLogTimeout(webhook: $webhook, message: $message, lng: $lng, reason: $lng['embeds']['caps'], count: $settings['caps_warn_count'], timeout: $settings['caps_timeout']);
               });
             } else {
@@ -78,8 +78,8 @@ try {
   // throw new ErrorException($th);
 }
 
-$message->delete()->done(function () use ($message) {
-  echo "[-] Caps | Удалено: {$message->content} | " . convert(memory_get_usage(true));
+$message->delete()->done(function () {
+  echo "[-] Caps | " . convert(memory_get_usage(true));
 });
 
 $del_msg = MessageBuilder::new()

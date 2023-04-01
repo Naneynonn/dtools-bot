@@ -19,24 +19,27 @@ else $skip = implode(', ', array_map(function ($entry) {
 }, $skip));
 
 
-$badword = checkBadWords(message: $message->content, skip: $skip)['badwords'];
+$badword_check = checkBadWords(message: $message->content, skip: $skip);
+if (!isset($badword_check['badwords'])) return;
+
+$badword = $badword_check['badwords'];
 if (!$badword) return;
 
 if (getIgnoredPermissions(perm: $perm, message: $message, selection: 'badwords')) return;
 
 if (!empty($settings['log_channel'])) {
   $message->guild->channels->fetch($settings['log_channel'])->done(function (Channel $channel) use ($message, $discord, $lng) {
-    $channel->webhooks->freshen()->done(function (WebhookRepository $webhooks) use ($message, $discord, $lng) {
+    $channel->webhooks->freshen()->done(function (WebhookRepository $webhooks) use ($message, $discord, $lng, $channel) {
 
       $webhook = getOneWebhook(webhooks: $webhooks);
 
       if (!$webhook) {
-        $create = $message->channel->webhooks->create([
+        $create = $channel->webhooks->create([
           'name' => $lng['wh_log_name'],
           'avatar' => getDecodeImage(url: $discord->user->getAvatarAttribute(format: 'png', size: 1024))
         ]);
 
-        $message->channel->webhooks->save($create)->done(function ($webhook) use ($message, $lng) {
+        $channel->webhooks->save($create)->done(function ($webhook) use ($message, $lng) {
           whLog(webhook: $webhook, message: $message, lng: $lng, reason: $lng['embeds']['foul-lang']);
         });
       } else {
@@ -54,17 +57,17 @@ try {
 
       if (!empty($settings['log_channel'])) {
         $message->guild->channels->fetch($settings['log_channel'])->done(function (Channel $channel) use ($message, $discord, $settings, $lng) {
-          $channel->webhooks->freshen()->done(function (WebhookRepository $webhooks) use ($message, $discord, $settings, $lng) {
+          $channel->webhooks->freshen()->done(function (WebhookRepository $webhooks) use ($message, $discord, $settings, $lng, $channel) {
 
             $webhook = getOneWebhook(webhooks: $webhooks);
 
             if (!$webhook) {
-              $create = $message->channel->webhooks->create([
+              $create = $channel->webhooks->create([
                 'name' => $lng['wh_log_name'],
                 'avatar' => getDecodeImage(url: $discord->user->getAvatarAttribute(format: 'png', size: 1024))
               ]);
 
-              $message->channel->webhooks->save($create)->done(function ($webhook) use ($message, $settings, $lng) {
+              $channel->webhooks->save($create)->done(function ($webhook) use ($message, $settings, $lng) {
                 whLogTimeout(webhook: $webhook, message: $message, lng: $lng, reason: $lng['embeds']['foul-lang'], count: $settings['bw_warn_count'], timeout: $settings['bw_timeout']);
               });
             } else {
@@ -82,8 +85,8 @@ try {
   // throw new ErrorException($th);
 }
 
-$message->delete()->done(function () use ($message) {
-  echo "[-] BadWords | Удалено: {$message->content} | " . convert(memory_get_usage(true));
+$message->delete()->done(function () {
+  echo "[-] BadWords | " . convert(memory_get_usage(true));
 });
 
 $del_msg = MessageBuilder::new()
