@@ -86,7 +86,7 @@ try {
 }
 
 $message->delete()->done(function () {
-  echo "[-] BadWords | " . convert(memory_get_usage(true));
+  echo "[-] BadWords | " . convert(memory_get_usage(true)) . " | " . convert(memory_get_peak_usage(true));
 });
 
 $del_msg = MessageBuilder::new()
