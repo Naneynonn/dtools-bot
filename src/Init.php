@@ -67,7 +67,7 @@ class Init
     $lng = new Language();
 
     $this->activity = $this->discord->factory(Activity::class, [
-      'name' => $lng->get_global(key: 'activity'),
+      'name' => $lng->get(key: 'activity'),
       'type' => Activity::TYPE_WATCHING
     ]);
     $this->discord->updatePresence($this->activity);

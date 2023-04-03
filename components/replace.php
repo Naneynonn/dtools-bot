@@ -8,13 +8,13 @@ use Discord\Parts\Channel\Message;
 
 use Carbon\Carbon;
 
-if (!$settings['is_replace_status']) return;
-if ($stop) return;
+use Naneynonn\Embeds;
+
+if (!$settings['is_replace_status'] || $stop) return;
 
 $replace = getReplaceLetters(text: $message->content);
 
 if (!$replace) return;
-
 if (getIgnoredPermissions(perm: $perm, message: $message, selection: 'replace')) return;
 
 if (!empty($settings['log_channel'])) {
@@ -25,15 +25,15 @@ if (!empty($settings['log_channel'])) {
 
       if (!$webhook) {
         $create = $channel->webhooks->create([
-          'name' => $lng['wh_log_name'],
+          'name' => $lng->get('wh_log_name'),
           'avatar' => getDecodeImage(url: $discord->user->getAvatarAttribute(format: 'png', size: 1024))
         ]);
 
         $channel->webhooks->save($create)->done(function ($webhook) use ($message, $lng) {
-          whLog(webhook: $webhook, message: $message, lng: $lng, reason: $lng['embeds']['find-replace']);
+          Embeds::message_delete(webhook: $webhook, message: $message, lng: $lng, reason: $lng->get('embeds.find-replace'));
         });
       } else {
-        whLog(webhook: $webhook, message: $message, lng: $lng, reason: $lng['embeds']['find-replace']);
+        Embeds::message_delete(webhook: $webhook, message: $message, lng: $lng, reason: $lng->get('embeds.find-replace'));
       }
     });
   });
@@ -44,7 +44,7 @@ try {
   $is_timeout = isTimeTimeout(user_id: $message->author->id, warnings: $settings['replace_warn_count'], status: $settings['is_replace_timeout_status'], time: $settings['replace_time_check'], module: 'replace');
 
   if ($is_timeout) {
-    $message->member->timeoutMember(new Carbon($settings['replace_timeout'] . ' seconds'), $lng['embeds']['find-replace'])->done(function () use ($message, $settings, $discord, $lng) {
+    $message->member->timeoutMember(new Carbon($settings['replace_timeout'] . ' seconds'), $lng->get('embeds.find-replace'))->done(function () use ($message, $settings, $discord, $lng) {
 
       if (!empty($settings['log_channel'])) {
         $message->guild->channels->fetch($settings['log_channel'])->done(function (Channel $channel) use ($message, $discord, $settings, $lng) {
@@ -54,21 +54,21 @@ try {
 
             if (!$webhook) {
               $create = $channel->webhooks->create([
-                'name' => $lng['wh_log_name'],
+                'name' => $lng->get('wh_log_name'),
                 'avatar' => getDecodeImage(url: $discord->user->getAvatarAttribute(format: 'png', size: 1024))
               ]);
 
               $channel->webhooks->save($create)->done(function ($webhook) use ($message, $settings, $lng) {
-                whLogTimeout(webhook: $webhook, message: $message, lng: $lng, reason: $lng['embeds']['find-replace'], count: $settings['replace_warn_count'], timeout: $settings['replace_timeout']);
+                Embeds::timeout_member(webhook: $webhook, message: $message, lng: $lng, reason: $lng->get('embeds.find-replace'), count: $settings['replace_warn_count'], timeout: $settings['replace_timeout']);
               });
             } else {
-              whLogTimeout(webhook: $webhook, message: $message, lng: $lng, reason: $lng['embeds']['find-replace'], count: $settings['replace_warn_count'], timeout: $settings['replace_timeout']);
+              Embeds::timeout_member(webhook: $webhook, message: $message, lng: $lng, reason: $lng->get('embeds.find-replace'), count: $settings['replace_warn_count'], timeout: $settings['replace_timeout']);
             }
           });
         });
       }
 
-      echo "[-] Replace | Таймаут: {$message->author->username}";
+      echo "[-] Replace Timeout | " . convert(memory_get_usage(true));
     });
   }
 } catch (\Throwable $th) {
@@ -81,7 +81,7 @@ $message->delete()->done(function () {
 });
 
 $del_msg = MessageBuilder::new()
-  ->setContent(sprintf($lng['replace']['delete'], $message->author));
+  ->setContent(sprintf($lng->get('replace.delete'), $message->author));
 
 $message->channel->sendMessage($del_msg)->done(function (Message $message) {
   $message->delayedDelete(2500)->done(function () {

@@ -4,7 +4,7 @@ namespace Naneynonn;
 
 use PDO;
 
-class DB extends Config
+class Model extends Config
 {
   private $db;
 
@@ -16,6 +16,7 @@ class DB extends Config
   public function close(): void
   {
     $this->db = null;
+    unset($this->db);
   }
 
   public function getSettingsServer(string $id): array|false

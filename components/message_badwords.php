@@ -8,6 +8,8 @@ use Discord\Parts\Channel\Message;
 
 use Carbon\Carbon;
 
+use Naneynonn\Embeds;
+
 if (!$settings['is_bw_status']) return;
 if ($stop) return;
 
@@ -35,15 +37,17 @@ if (!empty($settings['log_channel'])) {
 
       if (!$webhook) {
         $create = $channel->webhooks->create([
-          'name' => $lng['wh_log_name'],
+          'name' => $lng->get('wh_log_name'),
           'avatar' => getDecodeImage(url: $discord->user->getAvatarAttribute(format: 'png', size: 1024))
         ]);
 
         $channel->webhooks->save($create)->done(function ($webhook) use ($message, $lng) {
-          whLog(webhook: $webhook, message: $message, lng: $lng, reason: $lng['embeds']['foul-lang']);
+          // whLog(webhook: $webhook, message: $message, lng: $lng, reason: $lng->get('embeds.foul-lang'));
+          Embeds::message_delete(webhook: $webhook, message: $message, lng: $lng, reason: $lng->get('embeds.foul-lang'));
         });
       } else {
-        whLog(webhook: $webhook, message: $message, lng: $lng, reason: $lng['embeds']['foul-lang']);
+        Embeds::message_delete(webhook: $webhook, message: $message, lng: $lng, reason: $lng->get('embeds.foul-lang'));
+        // whLog(webhook: $webhook, message: $message, lng: $lng, reason: $lng->get('embeds.foul-lang'));
       }
     });
   });
@@ -53,7 +57,7 @@ try {
   $is_timeout = isTimeTimeout(user_id: $message->author->id, warnings: $settings['bw_warn_count'], status: $settings['is_bw_timeout_status'], time: $settings['bw_time_check'], module: 'badwords');
 
   if ($is_timeout) {
-    $message->member->timeoutMember(new Carbon($settings['bw_timeout'] . ' seconds'), $lng['embeds']['foul-lang'])->done(function () use ($message, $settings, $discord, $lng) {
+    $message->member->timeoutMember(new Carbon($settings['bw_timeout'] . ' seconds'), $lng->get('embeds.foul-lang'))->done(function () use ($message, $settings, $discord, $lng) {
 
       if (!empty($settings['log_channel'])) {
         $message->guild->channels->fetch($settings['log_channel'])->done(function (Channel $channel) use ($message, $discord, $settings, $lng) {
@@ -63,21 +67,23 @@ try {
 
             if (!$webhook) {
               $create = $channel->webhooks->create([
-                'name' => $lng['wh_log_name'],
+                'name' => $lng->get('wh_log_name'),
                 'avatar' => getDecodeImage(url: $discord->user->getAvatarAttribute(format: 'png', size: 1024))
               ]);
 
               $channel->webhooks->save($create)->done(function ($webhook) use ($message, $settings, $lng) {
-                whLogTimeout(webhook: $webhook, message: $message, lng: $lng, reason: $lng['embeds']['foul-lang'], count: $settings['bw_warn_count'], timeout: $settings['bw_timeout']);
+                Embeds::timeout_member(webhook: $webhook, message: $message, lng: $lng, reason: $lng->get('embeds.foul-lang'), count: $settings['bw_warn_count'], timeout: $settings['bw_timeout']);
+                // whLogTimeout(webhook: $webhook, message: $message, lng: $lng, reason: $lng->get('embeds.foul-lang'), count: $settings['bw_warn_count'], timeout: $settings['bw_timeout']);
               });
             } else {
-              whLogTimeout(webhook: $webhook, message: $message, lng: $lng, reason: $lng['embeds']['foul-lang'], count: $settings['bw_warn_count'], timeout: $settings['bw_timeout']);
+              Embeds::timeout_member(webhook: $webhook, message: $message, lng: $lng, reason: $lng->get('embeds.foul-lang'), count: $settings['bw_warn_count'], timeout: $settings['bw_timeout']);
+              // whLogTimeout(webhook: $webhook, message: $message, lng: $lng, reason: $lng->get('embeds.foul-lang'), count: $settings['bw_warn_count'], timeout: $settings['bw_timeout']);
             }
           });
         });
       }
 
-      echo "[-] Caps | Таймаут: {$message->author->username}";
+      echo "[-] BadWords Timeout | " . convert(memory_get_peak_usage(true));
     });
   }
 } catch (\Throwable $th) {
@@ -90,7 +96,7 @@ $message->delete()->done(function () {
 });
 
 $del_msg = MessageBuilder::new()
-  ->setContent(sprintf($lng['badwords']['delete'], $message->author));
+  ->setContent(sprintf($lng->get('badwords.delete'), $message->author));
 
 $message->channel->sendMessage($del_msg)->done(function (Message $message) {
   $message->delayedDelete(2500)->done(function () {

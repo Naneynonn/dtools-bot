@@ -3,14 +3,8 @@
 ini_set('memory_limit', '-1');
 
 require_once 'vendor/autoload.php';
-
 require_once 'const/const_static.php';
-
-foreach (glob("functions/*.php") as $filename) {
-  require_once $filename;
-}
-
-require_once 'model.php';
+require_once 'functions/functions.php';
 
 use Discord\Discord;
 
@@ -25,8 +19,6 @@ $discord->on('ready', function (Discord $discord) use ($cfg) {
   $init->getActivity();
 
   echo $init->getLoadInfo();
-
-  $lng = require 'lang/global.php';
 
   // Load Events
   foreach (glob("events/*.php") as $filename) {

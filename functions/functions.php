@@ -3,6 +3,8 @@
 use Discord\Discord;
 use Discord\Parts\Channel\Message;
 
+use Naneynonn\Language;
+
 function getDecodeImage(string $url): string
 {
   $path = $url;
@@ -69,16 +71,16 @@ function getNormalEnd(int $num, string $for_1, string $for_2, string $for_5): st
   return $for_5;
 }
 
-function getNormalEndByLang(int $num, string $name, array $lng): string
+function wordEnd(int $num, string $name, Language $lng): string
 {
   $num = abs($num) % 100; // берем число по модулю и сбрасываем сотни (делим на 100, а остаток присваиваем переменной $num)
   $num_x = $num % 10; // сбрасываем десятки и записываем в новую переменную
 
-  if ($num > 10 && $num < 20) return $lng['count'][$name][5]; // если число принадлежит отрезку [11;19] 
-  if ($num_x > 1 && $num_x < 5) return $lng['count'][$name][2]; // иначе если число оканчивается на 2,3,4
-  if ($num_x == 1) return $lng['count'][$name][1]; // иначе если оканчивается на 1
+  if ($num > 10 && $num < 20) return $lng->get("count.{$name}.5"); // если число принадлежит отрезку [11;19] 
+  if ($num_x > 1 && $num_x < 5) return $lng->get("count.{$name}.2"); // иначе если число оканчивается на 2,3,4
+  if ($num_x == 1) return $lng->get("count.{$name}.1"); // иначе если оканчивается на 1
 
-  return $lng['count'][$name][5];
+  return $lng->get("count.{$name}.5");
 }
 
 function getLang(string $lang): array

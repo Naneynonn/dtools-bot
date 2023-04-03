@@ -9,26 +9,21 @@ class Language
   private const GLOBAL_FILE = 'global';
 
   private string $lang;
-  private array $langArray;
 
-  public function __construct(?string $lang = null)
+  public function __construct(string $lang)
   {
-    $this->lang = $lang ?? self::DEFAULT_LANG;
-    $this->langArray = $this->loadLangArray();
+    $this->lang = $lang;
   }
 
-  private function loadLangArray(): array
+  public function get(string $key): string
   {
     $lang_array = $this->load_lang(lang: $this->lang);
     $default_lang_array = $this->load_lang(lang: self::DEFAULT_LANG);
     $global_array = $this->load_lang(lang: self::GLOBAL_FILE);
 
-    return array_replace_recursive($default_lang_array, $lang_array, $global_array);
-  }
+    $merged_array = array_replace_recursive($default_lang_array, $lang_array, $global_array);
 
-  public function get(string $key): string
-  {
-    return $this->getValue(key: $key, array: $this->langArray);
+    return $this->getValue(key: $key, array: $merged_array);
   }
 
   private function getValue(string $key, array $array): string
@@ -45,12 +40,5 @@ class Language
   {
     $file = self::DIR_LANG . $lang . '.php';
     return require $file ?? [];
-  }
-
-  public function close(): void
-  {
-    $this->lang = '';
-    $this->langArray = [];
-    unset($this->lang, $this->langArray);
   }
 }
