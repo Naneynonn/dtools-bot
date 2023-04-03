@@ -42,12 +42,10 @@ if (!empty($settings['log_channel'])) {
         ]);
 
         $channel->webhooks->save($create)->done(function ($webhook) use ($message, $lng) {
-          // whLog(webhook: $webhook, message: $message, lng: $lng, reason: $lng->get('embeds.foul-lang'));
           Embeds::message_delete(webhook: $webhook, message: $message, lng: $lng, reason: $lng->get('embeds.foul-lang'));
         });
       } else {
         Embeds::message_delete(webhook: $webhook, message: $message, lng: $lng, reason: $lng->get('embeds.foul-lang'));
-        // whLog(webhook: $webhook, message: $message, lng: $lng, reason: $lng->get('embeds.foul-lang'));
       }
     });
   });
@@ -73,11 +71,9 @@ try {
 
               $channel->webhooks->save($create)->done(function ($webhook) use ($message, $settings, $lng) {
                 Embeds::timeout_member(webhook: $webhook, message: $message, lng: $lng, reason: $lng->get('embeds.foul-lang'), count: $settings['bw_warn_count'], timeout: $settings['bw_timeout']);
-                // whLogTimeout(webhook: $webhook, message: $message, lng: $lng, reason: $lng->get('embeds.foul-lang'), count: $settings['bw_warn_count'], timeout: $settings['bw_timeout']);
               });
             } else {
               Embeds::timeout_member(webhook: $webhook, message: $message, lng: $lng, reason: $lng->get('embeds.foul-lang'), count: $settings['bw_warn_count'], timeout: $settings['bw_timeout']);
-              // whLogTimeout(webhook: $webhook, message: $message, lng: $lng, reason: $lng->get('embeds.foul-lang'), count: $settings['bw_warn_count'], timeout: $settings['bw_timeout']);
             }
           });
         });
