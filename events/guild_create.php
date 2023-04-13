@@ -7,6 +7,8 @@ use Discord\Parts\Guild\Guild;
 use Naneynonn\Embeds;
 use Naneynonn\Model;
 
+use ByteUnits\Metric;
+
 $discord->on(Event::GUILD_CREATE, function (Guild $guild, Discord $discord) {
   $locale = ['en', 'uk', 'en'];
 
@@ -19,4 +21,6 @@ $discord->on(Event::GUILD_CREATE, function (Guild $guild, Discord $discord) {
   Embeds::log_servers(guild: $guild);
 
   $model->close();
+
+  echo 'Guild Create: ' . Metric::bytes(memory_get_usage())->format();
 });

@@ -10,6 +10,8 @@ use Carbon\Carbon;
 
 use Naneynonn\Embeds;
 
+use ByteUnits\Metric;
+
 if (!$settings['is_replace_status'] || $stop) return;
 
 $replace = getReplaceLetters(text: $message->content);
@@ -68,7 +70,7 @@ try {
         });
       }
 
-      echo "[-] Replace Timeout | " . convert(memory_get_usage(true));
+      echo "[-] Replace Timeout | " . Metric::bytes(memory_get_usage())->format();
     });
   }
 } catch (\Throwable $th) {
@@ -76,16 +78,14 @@ try {
   // throw new ErrorException($th);
 }
 
-$message->delete()->done(function () {
-  echo "[-] Replace | " . convert(memory_get_usage(true));
-});
+$message->delete();
 
 $del_msg = MessageBuilder::new()
   ->setContent(sprintf($lng->get('replace.delete'), $message->author));
 
-$message->channel->sendMessage($del_msg)->done(function (Message $message) {
-  $message->delayedDelete(2500)->done(function () {
-  });
+$message->channel->sendMessage($del_msg)->then(function (Message $message) {
+  $message->delayedDelete(2500);
 });
 
 $stop = true;
+echo '[-] Replace: ' . Metric::bytes(memory_get_usage())->format();

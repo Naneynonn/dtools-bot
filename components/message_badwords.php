@@ -10,6 +10,8 @@ use Carbon\Carbon;
 
 use Naneynonn\Embeds;
 
+use ByteUnits\Metric;
+
 if (!$settings['is_bw_status']) return;
 if ($stop) return;
 
@@ -19,7 +21,6 @@ if (!$skip) $skip = '';
 else $skip = implode(', ', array_map(function ($entry) {
   return $entry['word'];
 }, $skip));
-
 
 $badword_check = checkBadWords(message: $message->content, skip: $skip);
 if (!isset($badword_check['badwords'])) return;
@@ -79,7 +80,7 @@ try {
         });
       }
 
-      echo "[-] BadWords Timeout | " . convert(memory_get_peak_usage(true));
+      echo "[-] BadWords Timeout | " . Metric::bytes(memory_get_usage())->format();
     });
   }
 } catch (\Throwable $th) {
@@ -87,16 +88,14 @@ try {
   // throw new ErrorException($th);
 }
 
-$message->delete()->done(function () {
-  echo "[-] BadWords | " . convert(memory_get_usage(true)) . " | " . convert(memory_get_peak_usage(true));
-});
+$message->delete();
 
 $del_msg = MessageBuilder::new()
   ->setContent(sprintf($lng->get('badwords.delete'), $message->author));
 
-$message->channel->sendMessage($del_msg)->done(function (Message $message) {
-  $message->delayedDelete(2500)->done(function () {
-  });
+$message->channel->sendMessage($del_msg)->then(function (Message $message) {
+  $message->delayedDelete(2500);
 });
 
 $stop = true;
+echo '[-] BadWords: ' . Metric::bytes(memory_get_usage())->format();

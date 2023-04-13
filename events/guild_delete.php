@@ -7,6 +7,8 @@ use Discord\WebSockets\Event;
 use Naneynonn\Embeds;
 use Naneynonn\Model;
 
+use ByteUnits\Metric;
+
 $discord->on(Event::GUILD_DELETE, function (object $guild, Discord $discord, bool $unavailable) {
   $model = new Model();
 
@@ -19,4 +21,6 @@ $discord->on(Event::GUILD_DELETE, function (object $guild, Discord $discord, boo
   }
 
   $model->close();
+
+  echo 'Guild Delete: ' . Metric::bytes(memory_get_usage())->format();
 });

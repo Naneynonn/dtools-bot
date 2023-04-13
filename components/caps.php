@@ -10,7 +10,9 @@ use Carbon\Carbon;
 
 use Naneynonn\Embeds;
 
-if (!$settings['is_caps_status'] || $stop || mb_strlen($message->content) <= 3) return;
+use ByteUnits\Metric;
+
+if (!$settings['is_caps_status'] || $stop || mb_strlen($message->content) <= $settings['caps_start_length']) return;
 
 $percent = getTextPercent(text: $message->content);
 if ($percent < $settings['caps_percent']) return;
@@ -67,7 +69,7 @@ try {
         });
       }
 
-      echo "[-] Caps Timeout | " . convert(memory_get_usage(true));
+      echo "[-] Caps Timeout | " . Metric::bytes(memory_get_usage())->format();
     });
   }
 } catch (\Throwable $th) {
@@ -75,16 +77,14 @@ try {
   // throw new ErrorException($th);
 }
 
-$message->delete()->done(function () {
-  echo "[-] Caps | " . convert(memory_get_usage(true));
-});
+$message->delete();
 
 $del_msg = MessageBuilder::new()
   ->setContent(sprintf($lng->get('caps.delete'), $message->author));
 
-$message->channel->sendMessage($del_msg)->done(function (Message $message) {
-  $message->delayedDelete(2500)->done(function () {
-  });
+$message->channel->sendMessage($del_msg)->then(function (Message $message) {
+  $message->delayedDelete(2500);
 });
 
 $stop = true;
+echo '[-] Caps: ' . Metric::bytes(memory_get_usage())->format();
