@@ -11,11 +11,14 @@ use Discord\Discord;
 use Naneynonn\Settings;
 use Naneynonn\Init;
 
-$cfg = new Settings();
+$shard = isset($argv[1]) ? $argv[1] : null;
+$shards = isset($argv[2]) ? $argv[2] : null;
+
+$cfg = new Settings(shard: $shard, shards: $shards);
 $discord = $cfg->getDiscordSettings();
 
 $discord->on('ready', function (Discord $discord) use ($cfg) {
-  $init = new Init(discord: $discord, load_time: $cfg->getTimeElapsed());
+  $init = new Init(discord: $discord, load_time: $cfg->getTimeElapsed(), shard: $cfg->getShard());
   $init->getActivity();
 
   echo $init->getLoadInfo();
@@ -25,7 +28,7 @@ $discord->on('ready', function (Discord $discord) use ($cfg) {
     require_once $filename;
   }
 
-  require 'setup.php';
+  // require 'setup.php';
 });
 
 $discord->on('reconnected', function () {

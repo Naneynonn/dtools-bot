@@ -13,11 +13,13 @@ class Init
   private $activity;
 
   private string $load_time;
+  private int $shard;
 
-  public function __construct(Discord $discord, string $load_time)
+  public function __construct(Discord $discord, string $load_time, int $shard)
   {
     $this->discord = $discord;
     $this->load_time = $load_time;
+    $this->shard = $shard;
 
     $this->setActivity();
   }
@@ -45,11 +47,13 @@ class Init
   public function getLoadInfo(): string
   {
     return "    ------
+
     Logged in as 
     {$this->discord->user->username}
     {$this->discord->user->id}
     
     ------
+
     Guilds: {$this->discord->guilds->count()}
     All channels: {$this->getChannelCount()}
     Users: {$this->discord->users->count()}
@@ -57,6 +61,7 @@ class Init
     
     ------
     
+    Shard: {$this->shard}
     Started in {$this->load_time}
     
     ------";;
