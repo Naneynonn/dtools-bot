@@ -48,6 +48,7 @@ class Embeds extends Config
       ->setTitle(title: $title)
       ->addField(title: 'Название', value: "{$guild->name}", inLine: true)
       ->addField(title: 'ID', value: "{$guild->id}", inLine: true)
+      ->addField(title: 'Участников', value: "<:online:581922333493559308> 0 <:all:581922333569318923> {$guild->member_count}", inLine: true)
       ->setColor(color: $color);
 
     $webhook = new DiscordWebhook(webhookUrl: self::WEBHOOK_ADD);
@@ -77,7 +78,7 @@ class Embeds extends Config
       ->setAuthorIcon(author_icon: $icon)
       ->addField(title: $lng->get('embeds.author'), value: "{$message->author} | `{$message->author->username}#{$message->author->discriminator}`", inLine: true)
       ->addField(title: $lng->get('embeds.duration'), value: gmdate("H:i:s", $timeout), inLine: true)
-      ->addField(title: $lng->get('embeds.reason'), value: sprintf("> {$reason}, " . $lng->get('embed.violations'), $count, wordEnd(num: $count, name: 'violations', lng: $lng)), inLine: false)
+      ->addField(title: $lng->get('embeds.reason'), value: sprintf("> {$reason}, " . $lng->get('embeds.violations'), $count, wordEnd(num: $count, name: 'violations', lng: $lng)), inLine: false)
       ->setFooterText(footer_text: $lng->get('embeds.user-id') . ": {$message->author->id}")
       ->setColor(color: $color)
       ->setTimestamp(timestamp: new DateTime());
