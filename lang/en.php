@@ -13,6 +13,10 @@
     'delete' => '%s, don\'t use replacement characters!'
   ],
 
+  'zalgo' => [
+    'delete' => '%s, don\'t use zalgo text (unreadable characters)!'
+  ],
+
   'embeds' => [
     'msg-delete' => 'Message deleted',
     'channel' => 'Channel',
@@ -27,7 +31,8 @@
     'user-id' => 'User ID',
     'abuse-caps' => 'Abuse of caps, %s%%',
     'caps' => 'Abuse of caps',
-    'find-replace' => 'Similar symbols'
+    'find-replace' => 'Similar symbols',
+    'zalgo-text' => 'Zalgo text (unreadable characters)'
   ],
 
   'count' => [

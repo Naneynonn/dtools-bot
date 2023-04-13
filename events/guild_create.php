@@ -21,6 +21,8 @@ $discord->on(Event::GUILD_CREATE, function (Guild $guild, Discord $discord) {
   Embeds::log_servers(guild: $guild);
 
   $model->close();
+  $guild = null;
+  $discord = null;
 
   echo 'Guild Create: ' . Metric::bytes(memory_get_usage())->format();
 });

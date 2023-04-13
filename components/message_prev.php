@@ -19,12 +19,20 @@ try {
   // Load Lang
   $lng = new Language(lang: $settings['lang']);
 
+  require 'components/zalgo.php';
   require 'components/caps.php';
   require 'components/replace.php';
   require 'components/message_badwords.php';
 
+  // $settings = null;
+  // $perm = null;
+  // $lng = null;
+} finally {
   $settings = null;
   $perm = null;
-} finally {
+  $lng = null;
+  $message = null;
+  $discord = null;
+
   $model->close();
 }

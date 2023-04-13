@@ -199,3 +199,9 @@ function getIgnoredPermissions(?array $perm, Message $message, string $selection
 
   return false;
 }
+
+function isZalgo(string $text): bool
+{
+  $zalgoRegex = '/[\p{Mn}\p{Me}]/u'; // Регулярное выражение для символов Zalgo
+  return preg_match($zalgoRegex, $text) === 1;
+}
