@@ -26,9 +26,16 @@ class Language
     return array_replace_recursive($default_lang_array, $lang_array, $global_array);
   }
 
-  public function get(string $key): string
+  public function get(string $key, ...$args): string
   {
-    return $this->getValue(key: $key, array: $this->langArray);
+    $value = $this->getValue(key: $key, array: $this->langArray);
+    if (!empty($args)) {
+      $argValues = array_map(function ($arg) use ($key) {
+        return $this->getValue(key: $arg, array: $this->langArray);
+      }, $args);
+      $value = vsprintf($value, $argValues);
+    }
+    return $value;
   }
 
   private function getValue(string $key, array $array): string
@@ -45,12 +52,5 @@ class Language
   {
     $file = self::DIR_LANG . $lang . '.php';
     return require $file ?? [];
-  }
-
-  public function close(): void
-  {
-    $this->lang = '';
-    $this->langArray = [];
-    unset($this->lang, $this->langArray);
   }
 }
