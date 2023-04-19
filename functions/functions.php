@@ -2,8 +2,13 @@
 
 use Discord\Discord;
 use Discord\Parts\Channel\Message;
+use Discord\Repository\Channel\WebhookRepository;
 
 use Naneynonn\Language;
+use Naneynonn\Embeds;
+
+use Carbon\Carbon;
+use ByteUnits\Metric;
 
 function getDecodeImage(string $url): string
 {
@@ -11,32 +16,6 @@ function getDecodeImage(string $url): string
   $type = pathinfo($path, PATHINFO_EXTENSION);
   $data = file_get_contents($path);
   return 'data:image/' . $type . ';base64,' . base64_encode($data);
-}
-
-function checkBadWords(string $message, string $skip): ?array
-{
-  $url = 'https://api.discord.band/v1/badwords';
-
-  $body = [
-    "message" => $message,
-    "type" => 1,
-    "skip" => $skip
-  ];
-  $response_json = json_encode($body, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-
-  $ch = curl_init();
-  curl_setopt($ch, CURLOPT_URL, $url);
-  curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
-  curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json', 'Authorization: Bearer ' . CONFIG['api']['token']]);
-  curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
-  curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
-  curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 1);
-  curl_setopt($ch, CURLOPT_POSTFIELDS, $response_json);
-  $response = curl_exec($ch);
-  curl_close($ch);
-  $results = json_decode($response, true);
-
-  return $results;
 }
 
 function isTimeTimeout(string $user_id, int $warnings, bool $status, int $time, string $module): bool
@@ -83,17 +62,6 @@ function wordEnd(int $num, string $name, Language $lng): string
   return $lng->get("count.{$name}.5");
 }
 
-function getLang(string $lang): array
-{
-  if (file_exists('lang/' . $lang . '.php')) {
-    $lang = array_merge_recursive(require 'lang/global.php', require 'lang/' . $lang . '.php');
-  } else {
-    $lang = array_merge_recursive(require 'lang/global.php', require 'lang/en.php');
-  }
-
-  return $lang;
-}
-
 function getOneWebhook(object $webhooks): object|false
 {
   $wh = false;
@@ -107,37 +75,6 @@ function getOneWebhook(object $webhooks): object|false
   }
 
   return $wh;
-}
-
-function getTextPercent(string $text): float
-{
-  preg_match_all('/[А-ЯA-Z]/u', $text, $matches);
-  return round(count($matches[0]) / mb_strlen($text) * 100, 2);
-}
-
-function getReplaceLetters(string $text): bool
-{
-  // return preg_match('/(?=[а-яА-ЯёЁ]*[a-zA-Z])(?=[a-zA-Z]*[а-яА-ЯёЁ])[\wа-яА-ЯёЁ]+/u', $text) ? true : false;
-
-  // LAST WORK
-  // return preg_match('/[\wа-яА-ЯёЁ]+(?=[а-яА-ЯёЁ]*[a-zA-Z])(?=[a-zA-Z]*[а-яА-ЯёЁ])[\wа-яА-ЯёЁ]+/u', $text) ? true : false;
-  return preg_match('/\b(?=\w*[а-яА-Я])(?=\w*[a-zA-Z])\w*\b/u', $text) ? true : false;
-}
-
-function convert($size)
-{
-  $unit = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
-  return @round($size / pow(1024, ($i = floor(log($size, 1024)))), 2) . ' ' . $unit[$i];
-}
-
-function getGuildsChannels(Discord $discord): string
-{
-  $channels_count = 0;
-  foreach ($discord->guilds as $guild) {
-    $channels_count += $guild->channels->count();
-  }
-
-  return $channels_count;
 }
 
 function getIgnoredPermissions(?array $perm, Message $message, string $selection): bool
@@ -200,8 +137,66 @@ function getIgnoredPermissions(?array $perm, Message $message, string $selection
   return false;
 }
 
-function isZalgo(string $text): bool
+function logToChannel(Message $message, Language $lng, Discord $discord, ?string $log_channel, string $reason): void
 {
-  $zalgoRegex = '/[\p{Mn}\p{Me}]/u'; // Регулярное выражение для символов Zalgo
-  return preg_match($zalgoRegex, $text) === 1;
+  if (empty($log_channel)) return;
+
+  $channel = $message->guild->channels->get('id', $log_channel);
+  $channel->webhooks->freshen()->done(function (WebhookRepository $webhooks) use ($message, $discord, $lng, $reason, $channel) {
+
+    $webhook = getOneWebhook(webhooks: $webhooks);
+
+    if (!$webhook) {
+      $create = $channel->webhooks->create([
+        'name' => $lng->get('wh_log_name'),
+        'avatar' => getDecodeImage(url: $discord->user->getAvatarAttribute(format: 'png', size: 1024))
+      ]);
+
+      $channel->webhooks->save($create)->done(function ($webhook) use ($message, $lng, $reason) {
+        Embeds::message_delete(webhook: $webhook, message: $message, lng: $lng, reason: $reason);
+      });
+    } else {
+      Embeds::message_delete(webhook: $webhook, message: $message, lng: $lng, reason: $reason);
+    }
+  });
+}
+
+function addUserTimeout(Message $message, Language $lng, Discord $discord, array $settings, string $module, string $reason): void
+{
+  try {
+    $is_timeout = isTimeTimeout(user_id: $message->author->id, warnings: $settings[$module . '_warn_count'], status: $settings['is_' . $module . '_timeout_status'], time: $settings[$module . '_time_check'], module: $module);
+
+    if (!$is_timeout) return;
+
+    $message->member->timeoutMember(new Carbon($settings[$module . '_timeout'] . ' seconds'), $reason)->done(function () use ($message, $settings, $discord, $lng, $module, $reason) {
+
+      if (empty($settings['log_channel'])) return;
+
+      $channel = $message->guild->channels->get('id', $settings['log_channel']);
+      $channel->webhooks->freshen()->done(function (WebhookRepository $webhooks) use ($message, $discord, $settings, $lng, $channel, $module, $reason) {
+
+        $webhook = getOneWebhook(webhooks: $webhooks);
+
+        if (!$webhook) {
+          $create = $channel->webhooks->create([
+            'name' => $lng->get('wh_log_name'),
+            'avatar' => getDecodeImage(url: $discord->user->getAvatarAttribute(format: 'png', size: 1024))
+          ]);
+
+          $channel->webhooks->save($create)->done(function ($webhook) use ($message, $settings, $lng, $module, $reason) {
+            Embeds::timeout_member(webhook: $webhook, message: $message, lng: $lng, reason: $reason, count: $settings[$module . '_warn_count'], timeout: $settings[$module . '_timeout']);
+          });
+        } else {
+          Embeds::timeout_member(webhook: $webhook, message: $message, lng: $lng, reason: $reason, count: $settings[$module . '_warn_count'], timeout: $settings[$module . '_timeout']);
+        }
+      });
+
+
+
+      echo "[-] NEW | {$module} Timeout | " . Metric::bytes(memory_get_usage())->format();
+    });
+  } catch (\Throwable $th) {
+    echo 'Err: ' . $th->getMessage();
+    // throw new ErrorException($th);
+  }
 }

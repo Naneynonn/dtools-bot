@@ -6,6 +6,7 @@ use Discord\Discord;
 use Discord\Parts\User\Activity;
 
 use Naneynonn\Language;
+use ByteUnits\Metric;
 
 class Init
 {
@@ -26,10 +27,7 @@ class Init
 
   private function getMemoryUsageFriendly(): string
   {
-    $size = memory_get_usage(true);
-    $unit = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
-
-    return @round($size / pow(1024, ($i = floor(log($size, 1024)))), 2) . ' ' . $unit[$i];
+    return Metric::bytes(memory_get_usage())->format();
   }
 
   private function getChannelCount(): int

@@ -3,7 +3,6 @@
 ini_set('memory_limit', '-1');
 
 require_once 'vendor/autoload.php';
-require_once 'const/const_static.php';
 require_once 'functions/functions.php';
 
 use Discord\Discord;

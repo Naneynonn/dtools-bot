@@ -3,6 +3,19 @@
 use Naneynonn\Language;
 use Naneynonn\Model;
 
+use Naneynonn\Filter\Caps;
+use Naneynonn\Filter\BadWords;
+use Naneynonn\Filter\Replace;
+use Naneynonn\Filter\Zalgo;
+
+use React\Promise\Promise;
+use function React\Promise\any;
+
+use Discord\Parts\Channel\Message;
+use Discord\Builders\MessageBuilder;
+
+use ByteUnits\Metric;
+
 $stop = false;
 
 if ($message->author?->bot || !$message->content) return;
@@ -19,10 +32,37 @@ try {
   // Load Lang
   $lng = new Language(lang: $settings['lang']);
 
-  require 'components/zalgo.php';
-  require 'components/caps.php';
-  require 'components/replace.php';
-  require 'components/message_badwords.php';
+  $promises = [
+    (new Caps(message: $message, lng: $lng, settings: $settings, perm: $perm))->process(),
+    (new Replace(message: $message, lng: $lng, settings: $settings, perm: $perm))->process(),
+    (new Zalgo(message: $message, lng: $lng, settings: $settings, perm: $perm))->process(),
+    (new BadWords(message: $message, lng: $lng, settings: $settings, perm: $perm, model: $model))->process()
+  ];
+
+  any($promises)->then(
+    function ($result) use ($lng, $discord, $settings, $message) {
+      $module = $result['module'];
+      $reason = $result['reason']['log'];
+      $reason_timeout = $result['reason']['timeout'];
+
+      $message->delete();
+
+      logToChannel(message: $message, lng: $lng, discord: $discord, log_channel: $settings['log_channel'], reason: $reason);
+      addUserTimeout(message: $message, lng: $lng, discord: $discord, settings: $settings, module: $module, reason: $reason_timeout);
+
+      $del_msg = MessageBuilder::new()
+        ->setContent(sprintf($lng->get($module . '.delete'), $message->author));
+
+      $message->channel->sendMessage($del_msg)->then(function (Message $message) {
+        $message->delayedDelete(2500);
+      });
+
+      echo "[-] NEW | {$module}: " . Metric::bytes(memory_get_usage())->format();
+    },
+    function ($reason) {
+      echo "[-] NEW | REJECT: " . Metric::bytes(memory_get_usage())->format();
+    }
+  );
 
   // $settings = null;
   // $perm = null;
