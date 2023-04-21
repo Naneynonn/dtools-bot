@@ -32,16 +32,16 @@ class Zalgo
 
   public function process(): PromiseInterface
   {
-    if (!$this->settings['is_' . self::TYPE . '_status']) return reject('status off');
+    if (!$this->settings['is_' . self::TYPE . '_status']) return reject($this->info(text: 'disable'));
 
     $zalgo = $this->isZalgo(text: $this->message->content);
-    if (!$zalgo) return reject('no zalgo');
+    if (!$zalgo) return reject($this->info(text: 'no zalgo'));
 
     // $percent = $this->getTextPercent(text: $this->message->content);
     // if ($percent < $this->settings[self::TYPE . '_percent']) return reject('percent zadelo');
 
     // вынести getIgnoredPermissions в MessageProcessor
-    if (getIgnoredPermissions(perm: $this->perm, message: $this->message, selection: self::TYPE)) return reject('ignored perm');
+    if (getIgnoredPermissions(perm: $this->perm, message: $this->message, selection: self::TYPE)) return reject($this->info(text: 'ignored perm'));
 
     return resolve([
       'module' => self::TYPE,
@@ -74,5 +74,10 @@ class Zalgo
 
     // Если залго текста нет или он является частью эмодзи, то возвращаем false
     return false;
+  }
+
+  private function info(string $text): string
+  {
+    return self::TYPE . ' | ' . $text;
   }
 }

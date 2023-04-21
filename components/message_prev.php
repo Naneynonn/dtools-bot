@@ -16,8 +16,6 @@ use Discord\Builders\MessageBuilder;
 
 use ByteUnits\Metric;
 
-$stop = false;
-
 if ($message->author?->bot || !$message->content) return;
 
 $model = new Model();
@@ -60,7 +58,7 @@ try {
       echo "[-] NEW | {$module}: " . Metric::bytes(memory_get_usage())->format();
     },
     function ($reason) {
-      echo "[-] NEW | REJECT: " . Metric::bytes(memory_get_usage())->format();
+      // echo "[-] NEW | REJECT: " . Metric::bytes(memory_get_usage())->format();
     }
   );
 

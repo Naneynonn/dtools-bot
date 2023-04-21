@@ -32,13 +32,13 @@ class Caps
 
   public function process(): PromiseInterface
   {
-    if (!$this->settings['is_' . self::TYPE . '_status'] || mb_strlen($this->message->content) <= $this->settings['caps_start_length']) return reject('status off');
+    if (!$this->settings['is_' . self::TYPE . '_status'] || mb_strlen($this->message->content) <= $this->settings[self::TYPE . '_start_length']) return reject($this->info(text: 'disable or len <= min'));
 
     $percent = $this->getTextPercent(text: $this->message->content);
-    if ($percent < $this->settings[self::TYPE . '_percent']) return reject('percent zadelo');
+    if ($percent < $this->settings[self::TYPE . '_percent']) return reject($this->info(text: 'no caps'));
 
     // вынести getIgnoredPermissions в MessageProcessor
-    if (getIgnoredPermissions(perm: $this->perm, message: $this->message, selection: self::TYPE)) return reject('ignored perm');
+    if (getIgnoredPermissions(perm: $this->perm, message: $this->message, selection: self::TYPE)) return reject($this->info(text: 'ignored perm'));
 
     return resolve([
       'module' => self::TYPE,
@@ -53,5 +53,10 @@ class Caps
   {
     preg_match_all('/[А-ЯA-Z]/u', $text, $matches);
     return round(count($matches[0]) / mb_strlen($text) * 100, 2);
+  }
+
+  private function info(string $text): string
+  {
+    return self::TYPE . ' | ' . $text;
   }
 }

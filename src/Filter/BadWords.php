@@ -36,20 +36,20 @@ class BadWords extends Config
 
   public function process(): PromiseInterface
   {
-    if (!$this->settings['is_' . self::TYPE . '_status']) return reject('status off');
+    if (!$this->settings['is_' . self::TYPE . '_status']) return reject($this->info(text: 'disable'));
 
     // Load BadWords Exceptions
     $skip = $this->model->getBadWordsExeption(id: $this->message->guild->id);
     $skip = $this->skipWords(skip: $skip);
 
     $badword_check = $this->checkBadWords(message: $this->message->content, skip: $skip);
-    if (!isset($badword_check['badwords'])) return reject('no badwords');
+    if (!isset($badword_check['badwords'])) return reject($this->info(text: 'error api'));
 
     $badword = $badword_check['badwords'];
-    if (!$badword) return reject('ok words');
+    if (!$badword) return reject($this->info(text: 'no badwords'));
 
     // вынести getIgnoredPermissions в MessageProcessor
-    if (getIgnoredPermissions(perm: $this->perm, message: $this->message, selection: self::TYPE)) return reject('ignored perm');
+    if (getIgnoredPermissions(perm: $this->perm, message: $this->message, selection: self::TYPE)) return reject($this->info(text: 'ignored perm'));
 
     return resolve([
       'module' => self::TYPE,
@@ -94,5 +94,10 @@ class BadWords extends Config
     $results = json_decode($response, true);
 
     return $results;
+  }
+
+  private function info(string $text): string
+  {
+    return self::TYPE . ' | ' . $text;
   }
 }

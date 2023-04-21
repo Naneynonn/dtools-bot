@@ -32,16 +32,16 @@ class Replace
 
   public function process(): PromiseInterface
   {
-    if (!$this->settings['is_' . self::TYPE . '_status']) return reject('status off');
+    if (!$this->settings['is_' . self::TYPE . '_status']) return reject($this->info(text: 'disable'));
 
     $replace = $this->getReplaceLetters(text: $this->message->content);
-    if (!$replace) return reject('no replace');
+    if (!$replace) return reject($this->info(text: 'no replace'));
 
     // $percent = $this->getTextPercent(text: $this->message->content);
     // if ($percent < $this->settings[self::TYPE . '_percent']) return reject('percent zadelo');
 
     // вынести getIgnoredPermissions в MessageProcessor
-    if (getIgnoredPermissions(perm: $this->perm, message: $this->message, selection: self::TYPE)) return reject('ignored perm');
+    if (getIgnoredPermissions(perm: $this->perm, message: $this->message, selection: self::TYPE)) return reject($this->info(text: 'ignored perm'));
 
     return resolve([
       'module' => self::TYPE,
@@ -59,5 +59,10 @@ class Replace
     // LAST WORK
     // return preg_match('/[\wа-яА-ЯёЁ]+(?=[а-яА-ЯёЁ]*[a-zA-Z])(?=[a-zA-Z]*[а-яА-ЯёЁ])[\wа-яА-ЯёЁ]+/u', $text) ? true : false;
     return preg_match('/\b(?=\w*[а-яА-Я])(?=\w*[a-zA-Z])\w*\b/u', $text) ? true : false;
+  }
+
+  private function info(string $text): string
+  {
+    return self::TYPE . ' | ' . $text;
   }
 }
