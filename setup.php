@@ -6,113 +6,110 @@ use Discord\Parts\Interactions\Command\Command; // Please note to use this corre
 use Discord\Parts\Interactions\Command\Option;
 // use Discord\Parts\Interactions\Command\Choice;
 
-// $discord->application->commands->save($discord->application->commands->create(
-//   CommandBuilder::new()
-//     ->setName('set')
-//     ->setDescription('Bot setup')
-//     ->setDescriptionLocalization('ru', 'Настройка бота')
-//     ->setDescriptionLocalization('uk', 'Налаштування бота')
-//     ->addOption((new Option($discord))
-//         ->setName('automod')
-//         ->setDescription('Automoderation module')
-//         ->setDescriptionLocalization('ru', 'Модуль автомодерации')
-//         ->setDescriptionLocalization('uk', 'Модуль автомодерації')
-//         ->setType(Option::SUB_COMMAND_GROUP)
-//         ->addOption((new Option($discord))
-//             ->setName('filter')
-//             ->setDescription('Enable/disable auto-moderation module')
-//             ->setDescriptionLocalization('ru', 'Включить/выключить модуль авто-модерации')
-//             ->setDescriptionLocalization('uk', 'Включити/вимкнути модуль авто-модерації')
-//             ->setType(Option::SUB_COMMAND)
-//             ->addOption((new Option($discord))
-//                 ->setName('badwords')
-//                 ->setDescription('Enable/disable auto-moderation module')
-//                 ->setDescriptionLocalization('ru', 'Включить/выключить модуль авто-модерации')
-//                 ->setDescriptionLocalization('uk', 'Включити/вимкнути модуль авто-модерації')
-//                 ->setType(Option::BOOLEAN)
-//                 ->setRequired(true)
-//             )
-//             ->addOption((new Option($discord))
-//                 ->setName('caps')
-//                 ->setDescription('Enable/disable auto-moderation module')
-//                 ->setDescriptionLocalization('ru', 'Включить/выключить модуль авто-модерации')
-//                 ->setDescriptionLocalization('uk', 'Включити/вимкнути модуль авто-модерації')
-//                 ->setType(Option::BOOLEAN)
-//                 ->setRequired(true)
-//             )
-//             ->addOption((new Option($discord))
-//                 ->setName('replace')
-//                 ->setDescription('Enable/disable auto-moderation module')
-//                 ->setDescriptionLocalization('ru', 'Включить/выключить модуль авто-модерации')
-//                 ->setDescriptionLocalization('uk', 'Включити/вимкнути модуль авто-модерації')
-//                 ->setType(Option::BOOLEAN)
-//                 ->setRequired(true)
-//             )
-//         )
-//     )
-//     ->toArray()
-// ));
+$discord->application->commands->save($discord->application->commands->create(
+  CommandBuilder::new()
+    ->setName('help')
+    ->setDescription('DTools Bot Information')
+    ->setDescriptionLocalization('ru', 'Информация о боте DTools')
+    ->setDescriptionLocalization('uk', 'Інформація про бота DTools')
+    ->toArray()
+));
 
-// $create_cmd = new Command($discord, [
-//   'name' => 'set',
-//   'description' => 'Bot setup',
-//   'description_localizations' => [
-//     'ru' => 'Настройка бота',
-//     'uk' => 'Налаштування бота'
-//   ],
-//   'options' => [
-//     // [
-//     //   'name' => 'automod2',
-//     //   'description' => 'Enable/disable auto-moderation module',
-//     //   'description_localizations' => [
-//     //     'ru' => 'Включить/выключить модуль авто-модерации',
-//     //     'uk' => 'Включити/вимкнути модуль авто-модерації'
-//     //   ],
-//     //   'type' => 5,
-//     //   'required' => true
-//     // ],
-//     [
-//       'name' => 'automod',
-//       'description' => 'Automoderation module',
-//       'description_localizations' => [
-//         'ru' => 'Модуль автомодерации',
-//         'uk' => 'Модуль автомодерації'
-//       ],
-//       'type' => 2,
-//       'options' => [
-//         [
-//           'name' => 'enable',
-//           'description' => 'Enable/disable auto-moderation module',
-//           'description_localizations' => [
-//             'ru' => 'Включить/выключить модуль авто-модерации',
-//             'uk' => 'Включити/вимкнути модуль авто-модерації'
-//           ],
-//           'type' => 5,
-//           'required' => true
-//         ],
-//         // [
-//         //   'name' => 'log',
-//         //   'description' => 'Setting up channels for logs',
-//         //   'description_localizations' => [
-//         //     'ru' => 'Включить/выключить модуль авто-модерации',
-//         //     'uk' => 'Включити/вимкнути модуль авто-модерації'
-//         //   ],
-//         //   'type' => 1,
-//         //   'options' => [
-//         //     [
-//         //       'name' => 'badwords',
-//         //       'description' => 'badwords enable',
-//         //       // 'description_localizations' => [
-//         //       //   'ru' => 'Включить/выключить модуль авто-модерации',
-//         //       //   'uk' => 'Включити/вимкнути модуль авто-модерації'
-//         //       // ],
-//         //       'type' => 7,
-//         //       'required' => true
-//         //     ]
-//         //   ]
-//         // ]
-//       ]
-//     ]
-//   ]
-// ]);
-// $discord->application->commands->save($create_cmd);
+$discord->application->commands->save($discord->application->commands->create(
+  CommandBuilder::new()
+    ->setName('automod')
+    ->setDescription('Automoderation module')
+    ->setDescriptionLocalization('ru', 'Модуль автомодерации')
+    ->setDescriptionLocalization('uk', 'Модуль автомодерації')
+    ->addOption((new Option($discord))
+        ->setName('filter')
+        ->setDescription('Settings module')
+        ->setDescriptionLocalization('ru', 'Настройка модуля')
+        ->setDescriptionLocalization('uk', 'Налаштування модуля')
+        ->setType(Option::SUB_COMMAND)
+        ->addOption((new Option($discord))
+            ->setName('enable')
+            ->setDescription('Enable/disable auto-moderation module')
+            ->setDescriptionLocalization('ru', 'Включить/выключить модуль авто-модерации')
+            ->setDescriptionLocalization('uk', 'Включити/вимкнути модуль авто-модерації')
+            ->setType(Option::BOOLEAN)
+            ->setRequired(true)
+        )
+    )
+    ->addOption((new Option($discord))
+        ->setName('log')
+        ->setDescription('Automoderation module')
+        ->setDescriptionLocalization('ru', 'Модуль автомодерации')
+        ->setDescriptionLocalization('uk', 'Модуль автомодерації')
+        ->setType(Option::SUB_COMMAND)
+        ->addOption((new Option($discord))
+            ->setName('channel')
+            ->setDescription('Specify the channel ID to which the logs will be sent')
+            ->setDescriptionLocalization('ru', 'Укажите ID канала в который будут отправлять логи')
+            ->setDescriptionLocalization('uk', 'Вкажіть ID каналу в який будуть відправляти логи')
+            ->setType(Option::CHANNEL)
+            ->setRequired(true)
+        )
+    )
+    ->addOption((new Option($discord))
+        ->setName('badwords')
+        ->setDescription('Bad Word Filter')
+        ->setDescriptionLocalization('ru', 'Фильтр плохих слов')
+        ->setDescriptionLocalization('uk', 'Фільтр поганих слів')
+        ->setType(Option::SUB_COMMAND)
+        ->addOption((new Option($discord))
+            ->setName('enable')
+            ->setDescription('Enable/disable bad word filter')
+            ->setDescriptionLocalization('ru', 'Включить/выключить фильтр плохих слов')
+            ->setDescriptionLocalization('uk', 'Увімкнути/вимкнути фільтр поганих слів')
+            ->setType(Option::BOOLEAN)
+            ->setRequired(true)
+        )
+    )
+    ->addOption((new Option($discord))
+        ->setName('caps')
+        ->setDescription('Caps Filter')
+        ->setDescriptionLocalization('ru', 'Фильтр капса')
+        ->setDescriptionLocalization('uk', 'Фільтр капсу')
+        ->setType(Option::SUB_COMMAND)
+        ->addOption((new Option($discord))
+            ->setName('enable')
+            ->setDescription('Enable/disable caps filter')
+            ->setDescriptionLocalization('ru', 'Включить/выключить фильтр капса')
+            ->setDescriptionLocalization('uk', 'Увімкнути/вимкнути фільтр капсу')
+            ->setType(Option::BOOLEAN)
+            ->setRequired(true)
+        )
+    )
+    ->addOption((new Option($discord))
+        ->setName('replace')
+        ->setDescription('Similar characters filter')
+        ->setDescriptionLocalization('ru', 'Фильтр похожих символов')
+        ->setDescriptionLocalization('uk', 'Фільтр схожих символів')
+        ->setType(Option::SUB_COMMAND)
+        ->addOption((new Option($discord))
+            ->setName('enable')
+            ->setDescription('Enable/disable replace filter')
+            ->setDescriptionLocalization('ru', 'Включить/выключить фильтр похожих символов')
+            ->setDescriptionLocalization('uk', 'Увімкнути/вимкнути фільтр схожих символів')
+            ->setType(Option::BOOLEAN)
+            ->setRequired(true)
+        )
+    )
+    ->addOption((new Option($discord))
+        ->setName('zalgo')
+        ->setDescription('Zalgo Filter')
+        ->setDescriptionLocalization('ru', 'Фильтр Залго (нечитаемые символы)')
+        ->setDescriptionLocalization('uk', 'Фільтр Залго (нечитабельні символи)')
+        ->setType(Option::SUB_COMMAND)
+        ->addOption((new Option($discord))
+            ->setName('enable')
+            ->setDescription('Enable/disable zalgo filter')
+            ->setDescriptionLocalization('ru', 'Включить/выключить фильтр залго (нечитаемые символы)')
+            ->setDescriptionLocalization('uk', 'Увімкнути/вимкнути фільтр залго (нечитабельні символи)')
+            ->setType(Option::BOOLEAN)
+            ->setRequired(true)
+        )
+    )
+    ->toArray()
+));

@@ -80,4 +80,11 @@ class Init
   {
     return $this->activity;
   }
+
+  // public function load(string $name): void
+  // {
+  //   foreach (glob("{$name}/*.php") as $filename) {
+  //     require_once $filename;
+  //   }
+  // }
 }

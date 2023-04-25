@@ -7,13 +7,19 @@ class Language
   private const DEFAULT_LANG = 'en';
   private const DIR_LANG = 'lang/';
   private const GLOBAL_FILE = 'global';
+  private const LANG_LIST = ['en', 'ru', 'uk'];
 
   private string $lang;
   private array $langArray;
 
   public function __construct(?string $lang = null)
   {
-    $this->lang = $lang ?? self::DEFAULT_LANG;
+    if (isset($lang)) {
+      $this->lang = in_array($lang, self::LANG_LIST) ? $lang : self::DEFAULT_LANG;
+    } else {
+      $this->lang = self::DEFAULT_LANG;
+    }
+
     $this->langArray = $this->loadLangArray();
   }
 

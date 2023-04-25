@@ -27,7 +27,18 @@ $discord->on('ready', function (Discord $discord) use ($cfg) {
     require_once $filename;
   }
 
-  // require 'setup.php';
+  // Load Events
+  foreach (glob("commands/*.php") as $filename) {
+    require_once $filename;
+  }
+
+  // $discord->application->commands->freshen()->done(function ($commands) {
+  //   foreach ($commands as $command) {
+  //     $commands->delete($command);
+  //   }
+  // });
+
+  require 'setup.php';
 });
 
 $discord->on('reconnected', function () {

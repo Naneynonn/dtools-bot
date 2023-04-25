@@ -3,7 +3,9 @@
 use Discord\Discord;
 use Discord\Parts\Channel\Message;
 use Discord\Repository\Channel\WebhookRepository;
+use Discord\Parts\Interactions\Interaction;
 
+use Naneynonn\Model;
 use Naneynonn\Language;
 use Naneynonn\Embeds;
 
@@ -199,4 +201,25 @@ function addUserTimeout(Message $message, Language $lng, Discord $discord, array
     echo 'Err: ' . $th->getMessage();
     // throw new ErrorException($th);
   }
+}
+
+function toggleCommand(Interaction $interaction, Language $lng, object $discord, string $type): void
+{
+  $is_enable = $interaction->data->options[$type]->options['enable']->value;
+
+  if ($is_enable) {
+    $status = $lng->get('embeds.filter-enable');
+    $color = $lng->get('color.success');
+  } else {
+    $status = $lng->get('embeds.filter-disable');
+    $color = $lng->get('color.grey');
+  }
+
+  $model = new Model();
+  $model->automodToggleCommands(server_id: $interaction->guild->id, is_enable: $is_enable, type: $type);
+  $model->close();
+
+  $interaction->respondWithMessage(builder: Embeds::response(discord: $discord, color: $color, title: $status), ephemeral: true);
+
+  echo "[-] Command | automod {$type}: " . Metric::bytes(memory_get_usage())->format();
 }

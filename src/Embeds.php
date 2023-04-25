@@ -5,8 +5,11 @@ namespace Naneynonn;
 use Woeler\DiscordPhp\Message\DiscordEmbedMessage;
 use Woeler\DiscordPhp\Webhook\DiscordWebhook;
 
+use Discord\Discord;
+use Discord\Parts\Embed\Embed;
 use Discord\Parts\Guild\Guild;
 use Discord\Parts\Channel\Message;
+use Discord\Builders\MessageBuilder;
 
 use Naneynonn\Language;
 
@@ -85,5 +88,19 @@ class Embeds extends Config
 
     $webhook = new DiscordWebhook(webhookUrl: $webhook->url);
     $webhook->send(message: $embed);
+  }
+
+  public static function no_perm(Language $lng): MessageBuilder
+  {
+    return MessageBuilder::new()->setContent(sprintf($lng->get('no-perm'), 'Administrator, Owner'));
+  }
+
+  public static function response(object $discord, string $color, string $title): MessageBuilder
+  {
+    $embed = $discord->factory(Embed::class)
+      ->setDescription($title)
+      ->setColor($color);
+
+    return MessageBuilder::new()->addEmbed($embed);
   }
 }

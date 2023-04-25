@@ -76,4 +76,34 @@ class Model extends Config
 
     return $sql->fetchAll();
   }
+
+  public function updateAutomodLogChannel(string $server_id, string $log_channel): void
+  {
+    $sql = $this->db->prepare("UPDATE settings_automod SET log_channel = :log_channel WHERE server_id = :server_id");
+
+    $sql->bindValue(':server_id', $server_id, PDO::PARAM_STR);
+    $sql->bindValue(':log_channel', $log_channel, PDO::PARAM_STR);
+
+    $sql->execute();
+  }
+
+  public function automodToggle(string $server_id, bool $is_enable): void
+  {
+    $sql = $this->db->prepare("UPDATE settings_automod SET is_enable = :is_enable WHERE server_id = :server_id");
+
+    $sql->bindValue(':server_id', $server_id, PDO::PARAM_STR);
+    $sql->bindValue(':is_enable', $is_enable, PDO::PARAM_BOOL);
+
+    $sql->execute();
+  }
+
+  public function automodToggleCommands(string $server_id, bool $is_enable, string $type): void
+  {
+    $sql = $this->db->prepare("UPDATE settings_automod SET is_{$type}_status = :is_enable WHERE server_id = :server_id");
+
+    $sql->bindValue(':server_id', $server_id, PDO::PARAM_STR);
+    $sql->bindValue(':is_enable', $is_enable, PDO::PARAM_BOOL);
+
+    $sql->execute();
+  }
 }

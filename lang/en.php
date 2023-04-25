@@ -1,6 +1,8 @@
 <?php return [
   'test' => 'Test EN',
 
+  'no-perm' => 'You do not have enough permissions to execute this command. Required permissions: %s.',
+
   'badwords' => [
     'delete' => '%s, Don\'t use foul language!'
   ],
@@ -32,7 +34,22 @@
     'abuse-caps' => 'Abuse of caps, %s%%',
     'caps' => 'Abuse of caps',
     'find-replace' => 'Similar symbols',
-    'zalgo-text' => 'Zalgo text (unreadable characters)'
+    'zalgo-text' => 'Zalgo text (unreadable characters)',
+    'help' => [
+      'title' => 'DTools Information',
+      'description' => '**Website:** [%1$s](https://%1$s)
+      **Support:** [%2$s](https://%2$s)',
+      'info' => 'More flexible bot settings (rights, exceptions, etc.) are only available on the website.',
+      'settings' => 'Module settings'
+    ],
+    'commands' => 'Commands',
+    'info' => 'Information',
+    'filters' => 'Filters',
+    'automod-log' => '<:success:1099711698979528814> The log channel has been successfully updated.',
+    'automod-filter-on' => '<:enable:1099727536952447007> Module successfully enabled.',
+    'automod-filter-off' => '<:disable:1099727548629401651> Module successfully disabled.',
+    'filter-enable' => '<:enable:1099727536952447007> The filter is successfully turned on.',
+    'filter-disable' => '<:disable:1099727548629401651> The filter is successfully turned off.'
   ],
 
   'count' => [
