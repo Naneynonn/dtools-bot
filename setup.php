@@ -4,7 +4,7 @@ use Discord\Builders\CommandBuilder;
 
 use Discord\Parts\Interactions\Command\Command; // Please note to use this correct namespace!
 use Discord\Parts\Interactions\Command\Option;
-// use Discord\Parts\Interactions\Command\Choice;
+use Discord\Parts\Interactions\Command\Choice;
 
 $discord->application->commands->save($discord->application->commands->create(
   CommandBuilder::new()
@@ -109,6 +109,41 @@ $discord->application->commands->save($discord->application->commands->create(
             ->setDescriptionLocalization('uk', 'Увімкнути/вимкнути фільтр залго (нечитабельні символи)')
             ->setType(Option::BOOLEAN)
             ->setRequired(true)
+        )
+    )
+    ->toArray()
+));
+
+$discord->application->commands->save($discord->application->commands->create(
+  CommandBuilder::new()
+    ->setName('lang')
+    ->setDescription('Show bot language')
+    ->setDescriptionLocalization('ru', 'Показать язык бота')
+    ->setDescriptionLocalization('uk', 'Показати мову бота')
+    ->addOption((new Option($discord))
+        ->setName('set')
+        ->setDescription('Set bot language')
+        ->setDescriptionLocalization('ru', 'Установить язык бота')
+        ->setDescriptionLocalization('uk', 'Встановити мову бота')
+        ->setType(Option::STRING)
+        ->setRequired(false)
+        ->addChoice((new Choice($discord))
+            ->setName('English')
+            ->setNameLocalization('ru', 'Английский')
+            ->setNameLocalization('uk', 'Англійська')
+            ->setValue('en')
+        )
+        ->addChoice((new Choice($discord))
+            ->setName('Russian')
+            ->setNameLocalization('ru', 'Русский')
+            ->setNameLocalization('uk', 'Російська')
+            ->setValue('ru')
+        )
+        ->addChoice((new Choice($discord))
+            ->setName('Ukrainian')
+            ->setNameLocalization('ru', 'Украинский')
+            ->setNameLocalization('uk', 'Українська')
+            ->setValue('uk')
         )
     )
     ->toArray()

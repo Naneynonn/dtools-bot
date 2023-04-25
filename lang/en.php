@@ -49,7 +49,10 @@
     'automod-filter-on' => '<:enable:1099727536952447007> Module successfully enabled.',
     'automod-filter-off' => '<:disable:1099727548629401651> Module successfully disabled.',
     'filter-enable' => '<:enable:1099727536952447007> The filter is successfully turned on.',
-    'filter-disable' => '<:disable:1099727548629401651> The filter is successfully turned off.'
+    'filter-disable' => '<:disable:1099727548629401651> The filter is successfully turned off.',
+    'server-lang' => 'Server language: %s',
+    'lang-err' => 'This language does not exist.',
+    'lang-set' => 'You have successfully set a new language',
   ],
 
   'count' => [

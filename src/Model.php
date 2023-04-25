@@ -106,4 +106,22 @@ class Model extends Config
 
     $sql->execute();
   }
+
+  public function getServerLang(string $id): array
+  {
+    $sql = $this->db->prepare("SELECT * FROM servers WHERE server_id = ?");
+    $sql->execute([$id]);
+
+    return $sql->fetch();
+  }
+
+  public function setServerLang(string $server_id, string $lang): void
+  {
+    $sql = $this->db->prepare("UPDATE servers SET lang = :lang WHERE server_id = :server_id");
+
+    $sql->bindValue(':server_id', $server_id, PDO::PARAM_STR);
+    $sql->bindValue(':lang', $lang, PDO::PARAM_STR);
+
+    $sql->execute();
+  }
 }

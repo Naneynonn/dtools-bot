@@ -5,11 +5,11 @@
     'default' => '#8b5cf6',
     'success' => '#43b582',
     'error' => '#D53D3D',
-    'grey' => '4f545c'
+    'grey' => '#4f545c'
   ],
 
   'commands' => [
-    'main' => '</help:1099647032156762153>',
+    'main' => '</lang:1100393171436961843>',
     'automod' => '</automod filter:1099675008923598908>, </automod log:1099675008923598908>',
     'filters' => '</automod badwords:1099675008923598908>, </automod replace:1099675008923598908>, </automod caps:1099675008923598908>, </automod zalgo:1099675008923598908>'
   ],

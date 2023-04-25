@@ -103,4 +103,20 @@ class Embeds extends Config
 
     return MessageBuilder::new()->addEmbed($embed);
   }
+
+  public static function get_lang(Language $lng, object $discord, string $lang): MessageBuilder
+  {
+    $color = '#4f545c';
+
+    $embed = $discord->factory(Embed::class)
+      ->setDescription(sprintf($lng->get('embeds.server-lang'), $lang))
+      ->setColor($color);
+
+    return MessageBuilder::new()->addEmbed($embed);
+  }
+
+  public static function error(string $text): MessageBuilder
+  {
+    return MessageBuilder::new()->setContent($text);
+  }
 }
