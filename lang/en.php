@@ -53,6 +53,7 @@
     'server-lang' => 'Server language: %s',
     'lang-err' => 'This language does not exist.',
     'lang-set' => 'You have successfully set a new language',
+    'sticker-name' => 'Sticker: %s'
   ],
 
   'count' => [

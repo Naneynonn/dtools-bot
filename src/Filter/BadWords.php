@@ -60,6 +60,32 @@ class BadWords extends Config
     ]);
   }
 
+  public function processStickers(): PromiseInterface
+  {
+    if (!$this->settings['is_' . self::TYPE . '_status']) return reject($this->info(text: 'disable'));
+
+    // Load BadWords Exceptions
+    $skip = $this->model->getBadWordsExeption(id: $this->message->guild->id);
+    $skip = $this->skipWords(skip: $skip);
+
+    $badword_check = $this->checkBadWords(message: $this->message->sticker_items->first()->name, skip: $skip);
+    if (!isset($badword_check['badwords'])) return reject($this->info(text: 'error api'));
+
+    $badword = $badword_check['badwords'];
+    if (!$badword) return reject($this->info(text: 'no badwords'));
+
+    // вынести getIgnoredPermissions в MessageProcessor
+    if (getIgnoredPermissions(perm: $this->perm, message: $this->message, selection: self::TYPE)) return reject($this->info(text: 'ignored perm'));
+
+    return resolve([
+      'module' => self::TYPE,
+      'reason' => [
+        'log' => $this->lng->get('embeds.foul-lang'),
+        'timeout' => $this->lng->get('embeds.foul-lang')
+      ]
+    ]);
+  }
+
   private function skipWords(array $skip): string
   {
     if (!$skip) $skip = '';

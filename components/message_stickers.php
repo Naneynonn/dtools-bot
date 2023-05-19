@@ -3,12 +3,8 @@
 use Naneynonn\Language;
 use Naneynonn\Model;
 
-use Naneynonn\Filter\Caps;
 use Naneynonn\Filter\BadWords;
-use Naneynonn\Filter\Replace;
-use Naneynonn\Filter\Zalgo;
 
-use React\Promise\Promise;
 use function React\Promise\any;
 
 use Discord\Parts\Channel\Message;
@@ -16,7 +12,7 @@ use Discord\Builders\MessageBuilder;
 
 use ByteUnits\Metric;
 
-if (!$message->content) return;
+if (!($message->sticker_items ?? null)?->first()) return;
 
 $model = new Model();
 
@@ -31,10 +27,7 @@ try {
   $lng = new Language(lang: $settings['lang']);
 
   $promises = [
-    (new Caps(message: $message, lng: $lng, settings: $settings, perm: $perm))->process(),
-    (new Replace(message: $message, lng: $lng, settings: $settings, perm: $perm))->process(),
-    (new Zalgo(message: $message, lng: $lng, settings: $settings, perm: $perm))->process(),
-    (new BadWords(message: $message, lng: $lng, settings: $settings, perm: $perm, model: $model))->process()
+    (new BadWords(message: $message, lng: $lng, settings: $settings, perm: $perm, model: $model))->processStickers()
   ];
 
   any($promises)->then(
@@ -42,6 +35,7 @@ try {
       $module = $result['module'];
       $reason = $result['reason']['log'];
       $reason_timeout = $result['reason']['timeout'];
+      $message->content = sprintf($lng->get('embeds.sticker-name'), $message->sticker_items->first()->name);
 
       $message->delete();
 
