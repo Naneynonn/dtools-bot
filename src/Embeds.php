@@ -2,42 +2,84 @@
 
 namespace Naneynonn;
 
+use Ragnarok\Fenrir\Gateway\Events\MessageCreate;
+use Ragnarok\Fenrir\Parts\Message;
+use Ragnarok\Fenrir\Parts\Webhook;
+
+use Ragnarok\Fenrir\Gateway\Events\GuildCreate;
+use Ragnarok\Fenrir\Gateway\Events\GuildDelete;
+
+use Ragnarok\Fenrir\Rest\Helpers\Channel\EmbedBuilder;
+use Ragnarok\Fenrir\Rest\Helpers\Channel\MessageBuilder;
+
 use Woeler\DiscordPhp\Message\DiscordEmbedMessage;
 use Woeler\DiscordPhp\Webhook\DiscordWebhook;
 
-use Discord\Discord;
-use Discord\Parts\Embed\Embed;
-use Discord\Parts\Guild\Guild;
-use Discord\Parts\Channel\Message;
-use Discord\Builders\MessageBuilder;
-
 use Naneynonn\Language;
+use Naneynonn\Config;
 
-use DateTime;
-
-class Embeds extends Config
+final class Embeds
 {
-  public static function message_delete(object $webhook, Message $message, Language $lng, string $reason): void
+  use Config;
+
+  public static function messageDelete(Webhook $webhook, MessageCreate|Message $message, Language $lng, string $reason): void
   {
     $icon = 'https://media.discordapp.net/attachments/686585233339842572/708784170729472080/message_gray_minus_red.png';
     $color = 13974845;
 
-    $embed = (new DiscordEmbedMessage())
-      ->setAuthorName(author_name: $lng->get('embeds.msg-delete'))
-      ->setAuthorIcon(author_icon: $icon)
-      ->addField(title: $lng->get('embeds.channel'), value: "{$message->channel}", inLine: true)
-      ->addField(title: $lng->get('embeds.author'), value: "{$message->author} | `{$message->author->username}#{$message->author->discriminator}`", inLine: true)
-      ->addField(title: $lng->get('embeds.msg-content'), value: ">>> {$message->content}", inLine: false)
-      ->addField(title: $lng->get('embeds.reason'), value: "> {$reason}", inLine: false)
-      ->setFooterText(footer_text: $lng->get('embeds.msg-id') . ": {$message->id}")
-      ->setColor(color: $color)
-      ->setTimestamp(timestamp: new DateTime());
+    $channel = "<#{$message->channel_id}>";
+    $author = '<@' . $message->author->id . '>';
 
-    $webhook = new DiscordWebhook(webhookUrl: $webhook->url);
-    $webhook->send(message: $embed);
+    $embed = (new DiscordEmbedMessage())
+      ->setUsername($lng->trans('name'))
+      ->setAvatar(self::AVATAR)
+      ->setAuthorName(author_name: $lng->trans('embed.message.delete'))
+      ->setAuthorIcon(author_icon: $icon)
+      ->addField(title: $lng->trans('embed.channel'), value: $channel, inLine: true)
+      ->addField(title: $lng->trans('embed.author'), value: "{$author} | `@{$message->author->username}`", inLine: true)
+      ->addField(title: $lng->trans('embed.message.content'), value: ">>> {$message->content}", inLine: false)
+      ->addField(title: $lng->trans('embed.reason.name'), value: "> {$reason}", inLine: false)
+      ->setFooterText(footer_text: $lng->trans('embed.message.id') . ": {$message->id}")
+      ->setColor(color: $color)
+      ->setTimestamp(timestamp: new \DateTime());
+
+    $wh = new DiscordWebhook(webhookUrl: $webhook->url);
+    $wh->send(message: $embed);
   }
 
-  public static function log_servers(Guild $guild, bool $new = true): void
+  public static function timeoutMember(Webhook $webhook, MessageCreate|Message $message, Language $lng, string $reason, int $count, int $timeout): void
+  {
+    $icon = 'https://media.discordapp.net/attachments/686585233339842572/708784067684073492/member_gray_ban_red.png';
+    $color = 13974845;
+
+    $author = '<@' . $message->author->id . '>';
+    $v = $lng->trans('embed.violations', ['%count%' => $count, '%text%' => wordEnd(num: $count, name: 'violations', lng: $lng)]);
+
+    if ($timeout >= 86400) {
+      $days = floor($timeout / 86400);
+      $remaining_seconds = $timeout % 86400;
+      $time = $days . 'd ' . gmdate("H:i:s", $remaining_seconds);
+    } else {
+      $time = gmdate("H:i:s", $timeout);
+    }
+
+    $embed = (new DiscordEmbedMessage())
+      ->setUsername($lng->trans('name'))
+      ->setAvatar(self::AVATAR)
+      ->setAuthorName(author_name: $lng->trans('embed.user.mute'))
+      ->setAuthorIcon(author_icon: $icon)
+      ->addField(title: $lng->trans('embed.author'), value: "{$author} | `@{$message->author->username}`", inLine: true)
+      ->addField(title: $lng->trans('embed.duration'), value: $time, inLine: true)
+      ->addField(title: $lng->trans('embed.reason.name'), value: "> {$reason}, {$v}", inLine: false)
+      ->setFooterText(footer_text: $lng->trans('embed.user.id') . ": {$message->author->id}")
+      ->setColor(color: $color)
+      ->setTimestamp(timestamp: new \DateTime());
+
+    $wh = new DiscordWebhook(webhookUrl: $webhook->url);
+    $wh->send(message: $embed);
+  }
+
+  public static function sendLogGuild(GuildCreate|GuildDelete $guild, bool $new = true): void
   {
     if ($new) {
       $title = 'Новый сервер';
@@ -58,7 +100,7 @@ class Embeds extends Config
     $webhook->send(message: $embed);
   }
 
-  public static function err_log_servers(Guild $guild): void
+  public static function errLogGuild(object $guild): void
   {
     $color = 15548997;
 
@@ -71,52 +113,41 @@ class Embeds extends Config
     $webhook->send(message: $embed);
   }
 
-  public static function timeout_member(object $webhook, Message $message, Language $lng, string $reason, int $count, int $timeout): void
+  public static function commandHelp(Language $lng): EmbedBuilder
   {
-    $icon = 'https://media.discordapp.net/attachments/686585233339842572/708784067684073492/member_gray_ban_red.png';
-    $color = 13974845;
+    $color = hexdec(trim($lng->trans('color.default'), '#'));
 
-    $embed = (new DiscordEmbedMessage())
-      ->setAuthorName(author_name: $lng->get('embeds.mute-user'))
-      ->setAuthorIcon(author_icon: $icon)
-      ->addField(title: $lng->get('embeds.author'), value: "{$message->author} | `{$message->author->username}#{$message->author->discriminator}`", inLine: true)
-      ->addField(title: $lng->get('embeds.duration'), value: gmdate("H:i:s", $timeout), inLine: true)
-      ->addField(title: $lng->get('embeds.reason'), value: sprintf("> {$reason}, " . $lng->get('embeds.violations'), $count, wordEnd(num: $count, name: 'violations', lng: $lng)), inLine: false)
-      ->setFooterText(footer_text: $lng->get('embeds.user-id') . ": {$message->author->id}")
-      ->setColor(color: $color)
-      ->setTimestamp(timestamp: new DateTime());
-
-    $webhook = new DiscordWebhook(webhookUrl: $webhook->url);
-    $webhook->send(message: $embed);
+    return (new EmbedBuilder())
+      ->setTitle($lng->trans('embed.help.title', ['%name%' => $lng->trans('name')]))
+      ->setColor($color)
+      ->setDescription($lng->trans('embed.help.description', ['%web%' => $lng->trans('site'), '%sup%' => $lng->trans('support')]))
+      ->addField($lng->trans('embed.commands'), $lng->trans('commands.main'), false)
+      ->addField($lng->trans('embed.help.settings'), $lng->trans('commands.automod'), false)
+      ->addField($lng->trans('embed.filters'), $lng->trans('commands.filters'), false)
+      ->addField($lng->trans('embed.info'), $lng->trans('embed.help.info'), false)
+      ->setThumbnail('https://cdn.discordapp.com/attachments/525360788924399637/1099658819023421470/favicon.png');
   }
 
-  public static function no_perm(Language $lng): MessageBuilder
+  public static function noPerm(Language $lng): string
   {
-    return MessageBuilder::new()->setContent(sprintf($lng->get('no-perm'), 'Administrator, Owner'));
+    return $lng->trans('no-perm', ['%perm%' => 'Administrator, Owner']);
   }
 
-  public static function response(object $discord, string $color, string $title): MessageBuilder
+  public static function getLang(Language $lng, string $lang): EmbedBuilder
   {
-    $embed = $discord->factory(Embed::class)
+    $color = hexdec(trim('#4f545c', '#'));
+
+    return (new EmbedBuilder())
+      ->setDescription($lng->trans('embed.lang.server', ['%lang%' => $lang]))
+      ->setColor($color);
+  }
+
+  public static function response(string $color, string $title): EmbedBuilder
+  {
+    $set_color = hexdec(trim($color, '#'));
+
+    return (new EmbedBuilder())
       ->setDescription($title)
-      ->setColor($color);
-
-    return MessageBuilder::new()->addEmbed($embed);
-  }
-
-  public static function get_lang(Language $lng, object $discord, string $lang): MessageBuilder
-  {
-    $color = '#4f545c';
-
-    $embed = $discord->factory(Embed::class)
-      ->setDescription(sprintf($lng->get('embeds.server-lang'), $lang))
-      ->setColor($color);
-
-    return MessageBuilder::new()->addEmbed($embed);
-  }
-
-  public static function error(string $text): MessageBuilder
-  {
-    return MessageBuilder::new()->setContent($text);
+      ->setColor($set_color);
   }
 }

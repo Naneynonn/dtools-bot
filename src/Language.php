@@ -2,61 +2,61 @@
 
 namespace Naneynonn;
 
+use Symfony\Component\Translation\Loader\YamlFileLoader;
+use Symfony\Component\Translation\Translator;
+
+use DirectoryIterator;
+
 class Language
 {
-  private const DEFAULT_LANG = 'en';
-  private const DIR_LANG = 'lang/';
-  private const GLOBAL_FILE = 'global';
-  private const LANG_LIST = ['en', 'ru', 'uk'];
 
-  private string $lang;
-  private array $langArray;
+  private Translator $translator;
 
-  public function __construct(?string $lang = null)
+  public function __construct(string $defaultLocale = 'en')
   {
-    if (isset($lang)) {
-      $this->lang = in_array($lang, self::LANG_LIST) ? $lang : self::DEFAULT_LANG;
-    } else {
-      $this->lang = self::DEFAULT_LANG;
+    $this->translator = new Translator($defaultLocale);
+    $this->loadTranslations();
+  }
+
+  private function loadTranslations(): void
+  {
+    $directory = 'language';  // Или другой путь к вашему каталогу
+    $loader = new YamlFileLoader();
+    $this->translator->addLoader('yaml', $loader);
+
+    foreach (new DirectoryIterator($directory) as $file) {
+      if (!$file->isDot() && $file->isFile() && $file->getExtension() === 'yml') {
+        $locale = str_replace(['messages.', '.yml'], '', $file->getFilename());
+        $this->translator->addResource('yaml', $file->getPathname(), $locale);
+      }
     }
 
-    $this->langArray = $this->loadLangArray();
+    // Установка английского языка в качестве запасного
+    $this->translator->setFallbackLocales(['en']);
   }
 
-  private function loadLangArray(): array
+  public function trans(string $id, array $parameters = [], ?string $domain = null, ?string $locale = null): string
   {
-    $lang_array = $this->load_lang(lang: $this->lang);
-    $default_lang_array = $this->load_lang(lang: self::DEFAULT_LANG);
-    $global_array = $this->load_lang(lang: self::GLOBAL_FILE);
-
-    return array_replace_recursive($default_lang_array, $lang_array, $global_array);
+    return $this->translator->trans($id, $parameters, $domain, $locale);
   }
 
-  public function get(string $key, ...$args): string
+  public function setLocale(string $locale): void
   {
-    $value = $this->getValue(key: $key, array: $this->langArray);
-    if (!empty($args)) {
-      $argValues = array_map(function ($arg) use ($key) {
-        return $this->getValue(key: $arg, array: $this->langArray);
-      }, $args);
-      $value = vsprintf($value, $argValues);
-    }
-    return $value;
+    $this->translator->setLocale($locale);
   }
 
-  private function getValue(string $key, array $array): string
+  public function getLocale(): string
   {
-    $keys = explode('.', $key);
-    $current = $array;
-    foreach ($keys as $k) {
-      $current = $current[$k] ?? null;
-    }
-    return $current ?? '';
+    return $this->translator->getLocale();
   }
 
-  private function load_lang(string $lang): array
+  public function __clone()
   {
-    $file = self::DIR_LANG . $lang . '.php';
-    return require $file ?? [];
+    // Создаем новый экземпляр Translator
+    $this->translator = new Translator($this->translator->getLocale());
+    // Перезагружаем переводы для нового экземпляра
+    $this->loadTranslations();
   }
+
+  // Другие возможные методы для управления переводами
 }

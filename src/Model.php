@@ -2,10 +2,14 @@
 
 namespace Naneynonn;
 
+use Naneynonn\Config;
+
 use PDO;
 
-class Model extends Config
+class Model
 {
+  use Config;
+
   private $db;
 
   public function __construct()

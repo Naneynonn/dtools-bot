@@ -15,9 +15,9 @@ use Naneynonn\Language;
 use function React\Promise\reject;
 use function React\Promise\resolve;
 
-class Replace
+class Russian
 {
-  private const TYPE = 'replace';
+  private const TYPE = 'russian';
 
   private Message|MessageCreate $message;
   private Channel $channel;
@@ -43,11 +43,8 @@ class Replace
   {
     if (!$this->settings['is_' . self::TYPE . '_status']) return reject($this->info(text: 'disable'));
 
-    $replace = $this->getReplaceLetters(text: $this->message->content);
-    if (!$replace) return reject($this->info(text: 'no replace'));
-
-    // $percent = $this->getTextPercent(text: $this->message->content);
-    // if ($percent < $this->settings[self::TYPE . '_percent']) return reject('percent zadelo');
+    $check = $this->checkIfRussian(sentence: $this->message->content);
+    if (!$check) return reject($this->info(text: 'no russian'));
 
     // вынести getIgnoredPermissions в MessageProcessor
     if (getIgnoredPermissions(perm: $this->perm, message: $this->message, member: $this->member, parent_id: $this->channel->parent_id, selection: self::TYPE)) {
@@ -57,19 +54,34 @@ class Replace
     return resolve([
       'module' => self::TYPE,
       'reason' => [
-        'log' => $this->lng->trans('embed.reason.find-replace'),
-        'timeout' => $this->lng->trans('embed.reason.find-replace')
+        'log' => $this->lng->trans('embed.reason.russian'),
+        'timeout' => $this->lng->trans('embed.reason.russian')
       ]
     ]);
   }
 
-  private function getReplaceLetters(string $text): bool
+  private function checkIfRussian(string $sentence): bool
   {
-    // return preg_match('/(?=[а-яА-ЯёЁ]*[a-zA-Z])(?=[a-zA-Z]*[а-яА-ЯёЁ])[\wа-яА-ЯёЁ]+/u', $text) ? true : false;
+    // Уникальные буквы для каждого языка
+    $rusUniqueChars = ['ё', 'ы', 'э', 'ъ'];
+    $ukrUniqueChars = ['є', 'і', 'ї', 'ґ'];
 
-    // LAST WORK
-    // return preg_match('/[\wа-яА-ЯёЁ]+(?=[а-яА-ЯёЁ]*[a-zA-Z])(?=[a-zA-Z]*[а-яА-ЯёЁ])[\wа-яА-ЯёЁ]+/u', $text) ? true : false;
-    return preg_match('/\b(?=\w*[а-яА-Я])(?=\w*[a-zA-Z])\w*\b/u', $text) ? true : false;
+    $sentenceChars = mb_str_split(mb_strtolower($sentence));
+
+    foreach ($sentenceChars as $char) {
+      // Если находим уникальную букву русского языка - сразу считаем предложение русским
+      if (in_array($char, $rusUniqueChars)) {
+        return true;
+      }
+
+      // Если находим уникальную букву украинского языка - сразу считаем предложение не русским
+      if (in_array($char, $ukrUniqueChars)) {
+        return false;
+      }
+    }
+
+    // Если не нашли ни одной уникальной буквы - считаем предложение русским
+    return false;
   }
 
   private function info(string $text): string

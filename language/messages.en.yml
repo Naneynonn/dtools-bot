@@ -1,0 +1,100 @@
+name: DTools
+
+site: discordtools.cc
+support: discord.gg/8Yxdt9y8rB
+
+no-perm: "You do not have enough permissions to execute this command. Required permissions: %perm%."
+
+color:
+  default: "#8b5cf6"
+  success: "#43b582"
+  error: "#D53D3D"
+  grey: "#4f545c"
+
+commands:
+  main: </lang:1100393171436961843>
+  automod: </automod filter:1099675008923598908>, </automod log:1099675008923598908>
+  filters: </automod badwords:1099675008923598908>, </automod replace:1099675008923598908>, </automod caps:1099675008923598908>, </automod zalgo:1099675008923598908>, </automod duplicate:1099675008923598908>
+
+delete:
+  badwords:
+    foul: "%name%, Don't use foul language!"
+    insults: "%name%, Don't use insults!"
+    toxicity: "%name%, Don't use toxicity!"
+    suicide: |
+      %name%, Don't use words like that!
+
+      If you're having trouble in life, please use this link: https://en.wikipedia.org/wiki/List_of_suicide_crisis_lines . All anonymous.
+    politics: "%name%, Don't use such expressions!"
+    inadequacy: "%name%, Write more adequate things!"
+    threats: "%name%, Don't threaten people!"
+    forbidden: "%name%, Do not use prohibited content!"
+  caps: "%name%, Don't use so many caps!"
+  replace: "%name%, Don't use replacement characters!"
+  zalgo: "%name%, Don't use zalgo text (unreadable characters)!"
+  duplicate: "%name%, Don't use so many of the same words/symbols!"
+  russian: "%name%, Don't use Russian!"
+
+embed:
+  message:
+    delete: Message deleted
+    content: Message content
+    id: Message ID
+  reason:
+    name: Reason
+    foul-lang: Foul language
+    insults: Insults
+    toxicity: Toxicity
+    suicide: Suicide
+    politics: Politics
+    inadequacy: Inadequacy
+    threats: Threats
+    forbidden: Forbidden content
+    abuse-caps: Abuse of caps, ≥%percent%%
+    find-replace: Similar symbols
+    zalgo-text: Zalgo text (unreadable characters)
+    duplicate-reason: Duplicate words/characters, ≥%percent%%
+    duplicate: Duplicate characters
+    russian: Russian language
+    caps: Abuse of caps
+  user:
+    id: User ID
+    mute: User is punished
+  help:
+    title: "%name% Information"
+    description: |
+      **Website:** [%site%](https://%site%)
+      **Support:** https://%sup%
+    info: More flexible bot settings (rights, exceptions, etc.) are only available on the website.
+    settings: Module settings
+  channel: Channel
+  author: Author
+  duration: Duration
+  violations: "%count% %text%"
+  commands: Commands
+  info: Information
+  filters: Filters
+  automod:
+    log: <:success:1099711698979528814> The log channel has been successfully updated.
+    filter:
+      enable: <:enable:1099727536952447007> Module successfully enabled.
+      disable: <:disable:1099727548629401651> Module successfully disabled.
+  filter:
+    enable: <:enable:1099727536952447007> The filter is successfully turned on.
+    disable: <:disable:1099727548629401651> The filter is successfully turned off.
+  lang:
+    server: "Server language: %lang%"
+    err: This language does not exist.
+    set: You have successfully set a new language
+  sticker-name: "Sticker: %sticker%"
+
+audit:
+  timeout: Auto-moderation filter triggers
+  webhook:
+    create: A webhook for logs has been created
+
+count:
+  violations:
+    1: violation
+    2: violations
+    5: violations

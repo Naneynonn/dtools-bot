@@ -2,89 +2,126 @@
 
 namespace Naneynonn;
 
-use Discord\Discord;
-use Discord\Parts\User\Activity;
+use Ragnarok\Fenrir\Discord;
+use Ragnarok\Fenrir\Bitwise\Bitwise;
+use Ragnarok\Fenrir\InteractionHandler;
 
+use Ragnarok\Fenrir\Gateway\Helpers\PresenceUpdateBuilder;
+use Ragnarok\Fenrir\Gateway\Helpers\ActivityBuilder;
+use Ragnarok\Fenrir\Gateway\Shard;
+use Ragnarok\Fenrir\Gateway\Events\Ready;
+
+use Ragnarok\Fenrir\Enums\Intent;
+use Ragnarok\Fenrir\Enums\StatusType;
+use Ragnarok\Fenrir\Enums\ActivityType;
+
+use React\EventLoop\Loop;
+
+use Naneynonn\Config;
 use Naneynonn\Language;
-use ByteUnits\Metric;
+
+// use Monolog\Logger;
+// use Monolog\Handler\StreamHandler;
+
+use Monolog\Logger;
+use Monolog\Handler\StreamHandler;
+use Monolog\Level;
+
+use DirectoryIterator;
 
 class Init
 {
-  private Discord $discord;
-  private $activity;
+  use Config;
+  use Memory;
 
-  private string $load_time;
-  private int $shard;
+  private int $shardId = 0;
+  private int $numShards = 1;
 
-  public function __construct(Discord $discord, string $load_time, int $shard)
+  public function __construct(?int $shardId = null, ?int $numShards = null)
   {
-    $this->discord = $discord;
-    $this->load_time = $load_time;
-    $this->shard = $shard;
-
-    $this->setActivity();
+    $this->shardId = $shardId ?? $this->shardId;
+    $this->numShards = $numShards ?? $this->numShards;
   }
 
-  private function getMemoryUsageFriendly(): string
+  private function setDiscord(): Discord
   {
-    return Metric::bytes(memory_get_usage())->format();
+    // $log = new Logger('Fenrir', [new StreamHandler('php://stdout')]); // Log to stdout (terminal output)
+    $log = (new Logger('Fenrir'))->pushHandler(new StreamHandler("logs/fnrr-{$this->shardId}.log", Level::Info));
+
+    $discord = (new Discord(
+      token: self::TOKEN,
+      logger: $log,
+    ))->withGateway(Bitwise::from(
+      Intent::GUILD_MESSAGES,
+      Intent::DIRECT_MESSAGES,
+      Intent::MESSAGE_CONTENT,
+      Intent::GUILDS
+    ))->withRest();
+
+    $discord->gateway->shard(new Shard($this->shardId, $this->numShards));
+
+    return $discord;
   }
 
-  private function getChannelCount(): int
+  public function getDiscord(): Discord
   {
-    $channelCount = $this->discord->private_channels->count();
-
-    /* @var \Discord\Parts\Guild\Guild */
-    foreach ($this->discord->guilds as $guild) {
-      $channelCount += $guild->channels->count();
-    }
-
-    return $channelCount;
+    return $this->setDiscord();
   }
 
-  public function getLoadInfo(): string
+  public function getBotInfo(Ready $event): void
   {
-    return "    ------
+    $guilds = count($event->guilds);
+
+    $this->getMemoryUsage(text: "    ------
 
     Logged in as 
-    {$this->discord->user->username}
-    {$this->discord->user->id}
+    {$event->user->username}
+    {$event->user->id}
     
     ------
 
-    Guilds: {$this->discord->guilds->count()}
-    All channels: {$this->getChannelCount()}
-    Users: {$this->discord->users->count()}
-    Memory use: {$this->getMemoryUsageFriendly()}
-    
+    Guilds: {$guilds}
+    Memory use:");
+
+    echo "    
     ------
     
-    Shard: {$this->shard}
-    Started in {$this->load_time}
+    Shard: {$event->shard[0]}
+    Started in -
     
-    ------";;
+    ------" . PHP_EOL;
   }
 
-  private function setActivity(): void
+  public function loadCommands(InteractionHandler $interactionHandler, Language $lng, Discord $discord): void
   {
-    $lng = new Language();
+    $directory = __DIR__ . '/Commands';
+    $loadedCount = 0;
 
-    $this->activity = $this->discord->factory(Activity::class, [
-      'name' => $lng->get(key: 'activity'),
-      'type' => Activity::TYPE_WATCHING
-    ]);
-    $this->discord->updatePresence($this->activity);
+    foreach (new DirectoryIterator($directory) as $file) {
+      if (!$file->isDot() && $file->isFile() && $file->getExtension() === 'php') {
+        $className = "Naneynonn\\Commands\\" . $file->getBasename('.php');
+        $instance = new $className($discord, $lng);
+
+        $interactionHandler->registerCommand($instance->register(), [$instance, 'handle']);
+
+        $loadedCount++;
+      }
+    }
+
+    // Вывод или логирование количества загруженных команд
+    $this->getMemoryUsage(text: "[~] Total loaded commands: {$loadedCount} |");
   }
 
-  public function getActivity()
+  public function setPresence(Discord $discord): void
   {
-    return $this->activity;
+    $discord->gateway->updatePresence(
+      PresenceUpdateBuilder::new()
+        ->setStatus(StatusType::ONLINE)
+        ->addActivity(
+          ActivityBuilder::new()
+            ->setName('discordtools.cc')
+            ->setType(ActivityType::WATCHING)
+        )
+    );
   }
-
-  // public function load(string $name): void
-  // {
-  //   foreach (glob("{$name}/*.php") as $filename) {
-  //     require_once $filename;
-  //   }
-  // }
 }

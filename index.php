@@ -1,48 +1,36 @@
 <?php
 
-ini_set('memory_limit', '-1');
+use Ragnarok\Fenrir\Constants\Events;
+use Ragnarok\Fenrir\Gateway\Events\Ready;
+use Ragnarok\Fenrir\InteractionHandler;
 
-require_once 'vendor/autoload.php';
-require_once 'functions/functions.php';
-
-use Discord\Discord;
-
-use Naneynonn\Settings;
 use Naneynonn\Init;
+use Naneynonn\Loader;
+use Naneynonn\Language;
 
-$shard = isset($argv[1]) ? $argv[1] : null;
-$shards = isset($argv[2]) ? $argv[2] : null;
+require './vendor/autoload.php';
 
-$cfg = new Settings(shard: $shard, shards: $shards);
-$discord = $cfg->getDiscordSettings();
+$shardId = $argv[1] ?? null;
+$numShards = $argv[2] ?? null;
 
-$discord->on('ready', function (Discord $discord) use ($cfg) {
-  $init = new Init(discord: $discord, load_time: $cfg->getTimeElapsed(), shard: $cfg->getShard());
-  $init->getActivity();
+$init = new Init(shardId: $shardId, numShards: $numShards);
+$discord = $init->getDiscord();
 
-  echo $init->getLoadInfo();
+$lng = new Language();
 
-  // Load Events
-  foreach (glob("events/*.php") as $filename) {
-    require_once $filename;
-  }
 
-  // Load Events
-  foreach (glob("commands/*.php") as $filename) {
-    require_once $filename;
-  }
+$interactionHandler = new InteractionHandler();
+$discord->registerExtension($interactionHandler);
 
-  // $discord->application->commands->freshen()->done(function ($commands) {
-  //   foreach ($commands as $command) {
-  //     $commands->delete($command);
-  //   }
-  // });
+$init->loadCommands($interactionHandler, $lng, $discord);
 
-  require 'setup.php';
+$discord->gateway->events->once(Events::READY, function (Ready $event) use ($discord, $init, $lng) {
+  $init->setPresence(discord: $discord);
+
+  $loader = new Loader($discord, $lng, $event);
+  $loader->loadEvents();
+
+  $init->getBotInfo(event: $event);
 });
 
-$discord->on('reconnected', function () {
-  echo "\n------ \nReconnected \n------";
-});
-
-$discord->run();
+$discord->gateway->open();
