@@ -17,6 +17,8 @@ use Naneynonn\Config;
 use function React\Promise\reject;
 use function React\Promise\resolve;
 
+use Predis\Client;
+
 class BadWords
 {
   use Config;
@@ -32,6 +34,8 @@ class BadWords
 
   private array $settings;
   private array $perm;
+
+  private Client $redis;
 
   public function __construct(Message|MessageCreate|MessageUpdate $message, Language $lng, array $settings, array $perm, Model $model, Channel $channel, ?GuildMember $member)
   {
@@ -106,9 +110,7 @@ class BadWords
     if (!$badword) return reject($this->info(text: 'no badwords'));
 
     // вынести getIgnoredPermissions в MessageProcessor
-    if (getIgnoredPermissions(perm: $this->perm, message: $this->message, member: $this->member, parent_id: $this->channel->parent_id, selection: self::TYPE)) return reject($this->info(text: 'ignored perm'), member: $this->member);
-
-    // if (getIgnoredPermissions(perm: $this->perm, message: $this->message, parent_id: $this->channel->parent_id, selection: self::TYPE)) return reject($this->info(text: 'ignored perm'));
+    if (getIgnoredPermissions(perm: $this->perm, message: $this->message, member: $this->member, parent_id: $this->channel->parent_id, selection: self::TYPE)) return reject($this->info(text: 'ignored perm'));
 
     return resolve([
       'module' => self::TYPE,
@@ -118,6 +120,125 @@ class BadWords
         'delete' => $reason_del
       ]
     ]);
+  }
+
+  // TODO Принимает по 1 слову и проверяет
+  public function processLazyWords(): PromiseInterface
+  {
+    $msg_premium = '';
+
+    if (!$this->settings['is_' . self::TYPE . '_status']) return reject($this->info(text: 'disable'));
+    if ($this->settings['premium'] <= gmdate('Y-m-d H:i:s.u')) return reject($this->info(text: 'no premium'));
+
+    // Load BadWords Exceptions
+    $skip = $this->model->getBadWordsExeption(id: $this->channel->guild_id);
+    $skip = $this->skipWords(skip: $skip);
+
+
+    $this->redis = new Client();
+    $this->addMessageInRedis(message: $this->message->content);
+    $msg_premium = $this->getAllWordsAsString(); // Выведет составленное сообщение из слов
+    $msg_ids = $this->getMessageIds();
+
+    $badword_check = $this->checkBadWords(message: $msg_premium, skip: $skip);
+    if (!isset($badword_check['badwords'])) return reject($this->info(text: 'error api'));
+
+    $reason = $this->lng->trans('embed.reason.foul-lang');
+    $reason_del = $this->lng->trans('delete.badwords.foul');
+    if (!is_null($badword_check['bad_type'])) {
+      $reason_list = $this->decodeConditions(bitfield: $badword_check['bad_type']);
+      $reason = $reason_list['list'];
+      $reason_del = $reason_list['message'];
+    }
+
+    $badword = $badword_check['badwords'];
+    if (!$badword) return reject($this->info(text: 'no badwords'));
+
+    // очищаем если что-то нашло
+    $this->clearAllWords();
+
+    // вынести getIgnoredPermissions в MessageProcessor
+    if (getIgnoredPermissions(perm: $this->perm, message: $this->message, member: $this->member, parent_id: $this->channel->parent_id, selection: self::TYPE)) {
+      return reject($this->info(text: 'ignored perm'));
+    }
+
+    $result = [
+      'module' => self::TYPE,
+      'reason' => [
+        'log' => $reason,
+        'timeout' => $reason,
+        'delete' => $reason_del
+      ]
+    ];
+
+    // Добавляем 'lazy', если $msg_premium не пуст
+    if (!empty($msg_premium)) {
+      $result['lazy'] = [
+        'message' => $msg_premium,
+        'ids' => $msg_ids
+      ];
+    }
+
+    return resolve($result);
+  }
+
+  // Добавляет одно слово в Redis с уникальным ключом, включающим messageId
+  private function addMessageInRedis(string $message): void
+  {
+    $listKey = "messages:{$this->message->guild_id}:{$this->message->channel_id}";
+
+    if (mb_strlen($message) > 75 && substr_count($message, ' ') > 3) {
+      return; // Игнорирование, если условия не выполняются
+    }
+
+    // Проверка общего количества слов
+    if ($this->redis->llen($listKey) > 10) {
+      $this->redis->del($listKey); // Удаление списка, если слов больше 10
+    }
+
+    // Создание JSON-объекта с word и message_id
+    $wordData = json_encode([
+      'message' => $message,
+      'id' => $this->message->id
+    ]);
+
+    $this->redis->rpush($listKey, $wordData); // Добавление JSON-строки в конец списка
+    $this->redis->expire($listKey, 30); // Установка TTL для списка
+  }
+
+  // Возвращает все слова в виде строки для указанного guildId и channelId
+  public function getAllWordsAsString(): string
+  {
+    $listKey = "messages:{$this->message->guild_id}:{$this->message->channel_id}";
+    $wordsData = $this->redis->lrange($listKey, 0, -1); // Получение всех элементов из списка
+
+    $words = [];
+    foreach ($wordsData as $wordData) {
+      $data = json_decode($wordData, true);
+      $words[] = $data['message'];
+    }
+
+    return implode(' ', $words); // Соединение слов в одну строку
+  }
+
+  private function clearAllWords(): void
+  {
+    $listKey = "messages:{$this->message->guild_id}:{$this->message->channel_id}";
+    $this->redis->del($listKey);
+  }
+
+  public function getMessageIds(): array
+  {
+    $listKey = "messages:{$this->message->guild_id}:{$this->message->channel_id}";
+    $wordsData = $this->redis->lrange($listKey, 0, -1);
+
+    $messageIds = [];
+    foreach ($wordsData as $wordData) {
+      $data = json_decode($wordData, true);
+      $messageIds[] = $data['id'];
+    }
+
+    return $messageIds;
   }
 
   private function skipWords(array $skip): string

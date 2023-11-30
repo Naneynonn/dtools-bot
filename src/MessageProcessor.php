@@ -92,12 +92,15 @@ final class MessageProcessor
   private function processContent(Model $model, Channel $channel, ?GuildMember $member = null, array $settings, array $perm): void
   {
 
+    $bad = new BadWords(message: $this->message, lng: $this->lng, settings: $settings, perm: $perm, model: $model, channel: $channel, member: $member);
     $promises = [
       (new Caps(message: $this->message, lng: $this->lng, settings: $settings, perm: $perm, channel: $channel, member: $member))->process(),
       (new Replace(message: $this->message, lng: $this->lng, settings: $settings, perm: $perm, channel: $channel, member: $member))->process(),
       (new Zalgo(message: $this->message, lng: $this->lng, settings: $settings, perm: $perm, channel: $channel, member: $member))->process(),
       (new Duplicate(message: $this->message, lng: $this->lng, settings: $settings, perm: $perm, channel: $channel, member: $member))->process(),
       (new BadWords(message: $this->message, lng: $this->lng, settings: $settings, perm: $perm, model: $model, channel: $channel, member: $member))->process(),
+      $bad->process(),
+      $bad->processLazyWords(),
       (new Russian(message: $this->message, lng: $this->lng, settings: $settings, perm: $perm, channel: $channel, member: $member))->process()
     ];
 
@@ -107,7 +110,14 @@ final class MessageProcessor
       $reason_timeout = $result['reason']['timeout'];
       $reason_del = isset($result['reason']['delete']) ? $result['reason']['delete'] : $this->lng->trans('delete.' . $module);
 
-      $this->discord->rest->channel->deleteMessage(channelId: $this->message->channel_id, messageId: $this->message->id);
+      if (!empty($result['lazy'])) {
+        foreach ($result['lazy']['ids'] as $del_id) {
+          $this->discord->rest->channel->deleteMessage(channelId: $this->message->channel_id, messageId: $del_id);
+        }
+        $this->message->content = $result['lazy']['message'];
+      } else {
+        $this->discord->rest->channel->deleteMessage(channelId: $this->message->channel_id, messageId: $this->message->id);
+      }
 
       $text_string = outputString(settings: $settings, module: $module, message: $this->message, reason: $reason_del);
       $getDelText = MessageBuilder::new()->setContent($text_string);
