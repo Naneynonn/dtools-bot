@@ -185,9 +185,9 @@ class BadWords
   // Добавляет одно слово в Redis с уникальным ключом, включающим messageId
   private function addMessageInRedis(string $message): void
   {
-    $listKey = "messages:{$this->message->guild_id}:{$this->message->channel_id}";
+    $listKey = "messages:{$this->message->guild_id}:{$this->message->channel_id}:{$this->message->author->id}";
 
-    if (mb_strlen($message) > 75 && substr_count($message, ' ') > 3) {
+    if (mb_strlen($message) > 45 && substr_count($message, ' ') > 3) {
       return; // Игнорирование, если условия не выполняются
     }
 
@@ -209,7 +209,7 @@ class BadWords
   // Возвращает все слова в виде строки для указанного guildId и channelId
   public function getAllWordsAsString(): string
   {
-    $listKey = "messages:{$this->message->guild_id}:{$this->message->channel_id}";
+    $listKey = "messages:{$this->message->guild_id}:{$this->message->channel_id}:{$this->message->author->id}";
     $wordsData = $this->redis->lrange($listKey, 0, -1); // Получение всех элементов из списка
 
     $words = [];
@@ -223,13 +223,13 @@ class BadWords
 
   private function clearAllWords(): void
   {
-    $listKey = "messages:{$this->message->guild_id}:{$this->message->channel_id}";
+    $listKey = "messages:{$this->message->guild_id}:{$this->message->channel_id}:{$this->message->author->id}";
     $this->redis->del($listKey);
   }
 
   public function getMessageIds(): array
   {
-    $listKey = "messages:{$this->message->guild_id}:{$this->message->channel_id}";
+    $listKey = "messages:{$this->message->guild_id}:{$this->message->channel_id}:{$this->message->author->id}";
     $wordsData = $this->redis->lrange($listKey, 0, -1);
 
     $messageIds = [];
