@@ -7,6 +7,7 @@ use Ragnarok\Fenrir\Gateway\Events\Ready;
 
 use Naneynonn\Attr\EventHandlerFor;
 use Naneynonn\Language;
+use Naneynonn\CacheHelper;
 
 use DirectoryIterator;
 use ReflectionClass;
@@ -18,12 +19,14 @@ class Loader
   private Discord $discord;
   private Language $lng;
   private Ready $ready;
+  private CacheHelper $cache;
 
-  public function __construct(Discord $discord, Language $lng, Ready $ready)
+  public function __construct(Discord $discord, Language $lng, Ready $ready, CacheHelper $cache)
   {
     $this->discord = $discord;
     $this->lng = $lng;
     $this->ready = $ready;
+    $this->cache = $cache;
   }
 
   public function loadEvents(): void
@@ -40,7 +43,7 @@ class Loader
         foreach ($attributes as $attribute) {
           $eventName = $attribute->newInstance()->eventName;
 
-          $instance = new $className($this->discord, $this->lng, $this->ready);
+          $instance = new $className($this->discord, $this->lng, $this->ready, $this->cache);
           $this->discord->gateway->events->on($eventName, function (...$args) use ($instance) {
             call_user_func([$instance, 'handle'], ...$args);
           });

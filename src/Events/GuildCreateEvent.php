@@ -13,6 +13,7 @@ use Naneynonn\Language;
 use Naneynonn\Memory;
 use Naneynonn\Model;
 use Naneynonn\Embeds;
+use Naneynonn\CacheHelper;
 
 use Ragnarok\Fenrir\Parts\UnavailableGuild;
 
@@ -24,14 +25,16 @@ class GuildCreateEvent
   private Discord $discord;
   private Language $lng;
   private Ready $ready;
+  private CacheHelper $cache;
 
   private const LOCALE = ['en', 'uk', 'ru'];
 
-  public function __construct(Discord $discord, Language $lng, Ready $ready)
+  public function __construct(Discord $discord, Language $lng, Ready $ready, CacheHelper $cache)
   {
     $this->discord = $discord;
     $this->lng = $lng;
     $this->ready = $ready;
+    $this->cache = $cache;
   }
 
   public function handle(GuildCreate $event): void

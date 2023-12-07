@@ -13,6 +13,7 @@ use Naneynonn\Attr\EventHandlerFor;
 use Naneynonn\Language;
 use Naneynonn\Memory;
 use Naneynonn\Model;
+use Naneynonn\CacheHelper;
 
 #[EventHandlerFor(Events::GUILD_UPDATE)]
 class GuildUpdateEvent
@@ -22,12 +23,14 @@ class GuildUpdateEvent
   private Discord $discord;
   private Language $lng;
   private Ready $ready;
+  private CacheHelper $cache;
 
-  public function __construct(Discord $discord, Language $lng, Ready $ready)
+  public function __construct(Discord $discord, Language $lng, Ready $ready, CacheHelper $cache)
   {
     $this->discord = $discord;
     $this->lng = $lng;
     $this->ready = $ready;
+    $this->cache = $cache;
   }
 
   public function handle(GuildUpdate $event): void

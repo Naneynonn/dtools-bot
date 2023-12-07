@@ -11,6 +11,7 @@ use Naneynonn\Attr\EventHandlerFor;
 
 use Naneynonn\MessageProcessor;
 use Naneynonn\Language;
+use Naneynonn\CacheHelper;
 
 #[EventHandlerFor(Events::MESSAGE_UPDATE)]
 class MessageUpdateEvent
@@ -18,19 +19,21 @@ class MessageUpdateEvent
   private Discord $discord;
   private Language $lng;
   private Ready $ready;
+  private CacheHelper $cache;
 
-  public function __construct(Discord $discord, Language $lng, Ready $ready)
+  public function __construct(Discord $discord, Language $lng, Ready $ready, CacheHelper $cache)
   {
     $this->discord = $discord;
     $this->lng = $lng;
     $this->ready = $ready;
+    $this->cache = $cache;
   }
 
   public function handle(MessageUpdate $event): void
   {
     if (empty($event)) return;
 
-    $processor = new MessageProcessor(message: $event, lng: $this->lng, discord: $this->discord);
+    $processor = new MessageProcessor(message: $event, lng: $this->lng, discord: $this->discord, cache: $this->cache);
     $processor->process();
   }
 }
