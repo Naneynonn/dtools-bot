@@ -12,7 +12,7 @@ use Ragnarok\Fenrir\Enums\Permission;
 
 use Naneynonn\Language;
 
-function getIgnoredPermissions(?array $perm, MessageUpdate|MessageCreate $message, ?GuildMember $member = null, ?string $parent_id = null, string $selection): bool
+function getIgnoredPermissions(?array $perm, MessageUpdate|MessageCreate $message, string $selection, ?GuildMember $member = null, ?string $parent_id = null): bool
 {
   if (!$perm) return false;
 
