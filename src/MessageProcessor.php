@@ -65,7 +65,7 @@ final class MessageProcessor
       if (($this->message->author->bot ?? false) || empty($this->message)) return;
       if (empty($this->message->content) && empty($this->message->sticker_items)) return;
 
-      $start = microtime(true);
+      // $start = microtime(true);
 
       $channel = await($this->cache->cachedRequest(
         fn: fn () => $this->discord->rest->channel->get($this->message->channel_id),
@@ -85,7 +85,7 @@ final class MessageProcessor
         $this->startCode(channel: $channel);
       }
 
-      echo 'Время выполнения скрипта: ' . round(microtime(true) - $start, 4) . ' сек.' . PHP_EOL;
+      // echo 'Время выполнения скрипта: ' . round(microtime(true) - $start, 4) . ' сек.' . PHP_EOL;
     })();
   }
 
@@ -127,7 +127,7 @@ final class MessageProcessor
       (new Russian(message: $this->message, lng: $this->lng, settings: $settings, perm: $perm, channel: $channel, member: $member))->process()
     ];
 
-    any($promises)->then(function ($result) use ($settings) {
+    any($promises)->then(function ($result) use ($settings, $channel) {
       $module = $result['module'];
       $reason = $result['reason']['log'];
       $reason_timeout = $result['reason']['timeout'];
@@ -149,7 +149,7 @@ final class MessageProcessor
       });
 
       $this->logToChannel(settings: $settings, reason: $reason);
-      $this->addUserTimeout(settings: $settings, module: $module, reason: $reason_timeout);
+      $this->addUserTimeout(settings: $settings, module: $module, reason: $reason_timeout, channel: $channel);
       $this->getMemoryUsage(text: '[-] Del Message');
     });
   }
@@ -163,7 +163,7 @@ final class MessageProcessor
         (new BadWords(message: $this->message, lng: $this->lng, settings: $settings, perm: $perm, model: $model, channel: $channel, member: $member))->processStickers(sticker: $sticker)
       ];
 
-      any($promises)->then(function ($result) use ($settings, $sticker) {
+      any($promises)->then(function ($result) use ($settings, $sticker, $channel) {
         $module = $result['module'];
         $reason = $result['reason']['log'];
         $reason_timeout = $result['reason']['timeout'];
@@ -179,7 +179,7 @@ final class MessageProcessor
         });
 
         $this->logToChannel(settings: $settings, reason: $reason);
-        $this->addUserTimeout(settings: $settings, module: $module, reason: $reason_timeout);
+        $this->addUserTimeout(settings: $settings, module: $module, reason: $reason_timeout, channel: $channel);
         $this->getMemoryUsage(text: '[-] Del Sticker');
       });
     }
@@ -194,7 +194,7 @@ final class MessageProcessor
     });
   }
 
-  private function addUserTimeout(array $settings, string $module, string $reason): void
+  private function addUserTimeout(array $settings, string $module, string $reason, Channel $channel): void
   {
     $warnings = $module . '_warn_count';
     $isTimeoutStatus = 'is_' . $module . '_timeout_status';
@@ -204,7 +204,7 @@ final class MessageProcessor
     $is_timeout = $this->isTimeTimeout(warnings: $settings[$warnings], status: $settings[$isTimeoutStatus], time: $settings[$timeCheck], module: $module);
     if (!$is_timeout) return;
 
-    $this->setTimeout(settings: $settings, timeout: $timeout);
+    $this->setTimeout(settings: $settings, timeout: $timeout, channel: $channel);
 
     if (empty($settings['log_channel'])) return;
 
@@ -258,12 +258,12 @@ final class MessageProcessor
   }
 
 
-  private function setTimeout(array $settings, string $timeout): void
+  private function setTimeout(array $settings, string $timeout, Channel $channel): void
   {
     $seconds = $settings[$timeout] . ' seconds';
 
     $this->discord->rest->guild->modifyMember(
-      guildId: $this->message->guild_id,
+      guildId: $channel->guild_id,
       userId: $this->message->author->id,
       params: ['communication_disabled_until' => new Carbon($seconds)],
       reason: $this->lng->trans('audit.timeout')
