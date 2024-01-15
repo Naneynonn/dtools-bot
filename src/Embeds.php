@@ -100,14 +100,14 @@ final class Embeds
     $webhook->send(message: $embed);
   }
 
-  public static function errLogGuild(object $guild): void
+  public static function errLogGuild(object $event, array $guild): void
   {
-    $color = 15548997;
-
     $embed = (new DiscordEmbedMessage())
       ->setTitle(title: 'Гильдия недоступна или удалена')
-      ->addField(title: 'ID', value: "{$guild->id}", inLine: true)
-      ->setColor(color: $color);
+      ->addField(title: 'Название', value: "{$guild['name']}", inLine: true)
+      ->addField(title: 'ID', value: "{$event->id}", inLine: true)
+      ->addField(title: 'Участников', value: "<:online:581922333493559308> 0 <:all:581922333569318923> {$guild['members_all']}", inLine: true)
+      ->setColor(color: 15548997);
 
     $webhook = new DiscordWebhook(webhookUrl: self::WEBHOOK_ADD);
     $webhook->send(message: $embed);

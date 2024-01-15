@@ -53,10 +53,12 @@ class Model
     $sql->execute();
   }
 
-  public function deleteGuild(string $server_id): void
+  public function deleteGuild(string $server_id): array
   {
-    $sql = $this->db->prepare("UPDATE servers SET is_active = false WHERE server_id = ?");
+    $sql = $this->db->prepare("UPDATE servers SET is_active = false WHERE server_id = ? RETURNING *");
     $sql->execute([$server_id]);
+
+    return $sql->fetch();
   }
 
   public function createGuildInfo(string $name, string $lang, ?string $icon, int $members_online, int $members_all, string $server_id): void

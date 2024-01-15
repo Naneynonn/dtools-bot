@@ -41,6 +41,10 @@ class GuildDeleteEvent
     $existingIds = array_column($this->ready->guilds, 'id');
     $guildKey = array_search($event->id, $existingIds, true);
 
+    $model = new Model();
+    $guild = $model->deleteGuild(server_id: $event->id);
+    $model->close();
+
     if ($guildKey !== false) {
       // Удаляем гильдию из массива, если она найдена
       unset($this->ready->guilds[$guildKey]);
@@ -48,15 +52,9 @@ class GuildDeleteEvent
       // Чтобы переиндексировать массив после удаления элемента, если это необходимо
       $this->ready->guilds = array_values($this->ready->guilds);
 
-      Embeds::errLogGuild(guild: $event);
+      // Embeds::errLogGuild(guild: $event);
+      Embeds::errLogGuild(event: $event, guild: $guild);
     }
-
-
-    $model = new Model();
-
-    $model->deleteGuild(server_id: $event->id);
-
-    $model->close();
 
     $this->getMemoryUsage(text: "[~] Events::GUILD_DELETE | ID: {$event->id}");
   }
