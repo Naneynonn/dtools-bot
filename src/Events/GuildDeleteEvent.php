@@ -52,8 +52,9 @@ class GuildDeleteEvent
       // Чтобы переиндексировать массив после удаления элемента, если это необходимо
       $this->ready->guilds = array_values($this->ready->guilds);
 
-      // Embeds::errLogGuild(guild: $event);
-      Embeds::errLogGuild(event: $event, guild: $guild);
+      if ($guild) {
+        Embeds::errLogGuild(event: $event, guild: $guild);
+      }
     }
 
     $this->getMemoryUsage(text: "[~] Events::GUILD_DELETE | ID: {$event->id}");
