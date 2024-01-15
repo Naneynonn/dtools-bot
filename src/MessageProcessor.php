@@ -39,6 +39,8 @@ use function React\Promise\any;
 use function React\Async\await;
 use function React\Async\async;
 
+use Exception;
+
 final class MessageProcessor
 {
   use Config;
@@ -146,11 +148,15 @@ final class MessageProcessor
       $getDelText = MessageBuilder::new()->setContent($text_string);
       $this->discord->rest->channel->createMessage($this->message->channel_id, $getDelText)->then(function (Message $message) use ($settings, $module) {
         $this->loop->addTimer($settings[$module . '_delete_after_seconds'], fn () => $this->discord->rest->channel->deleteMessage($message->channel_id, $message->id));
+      }, function (Exception $e) {
+        echo 'Error: ' . $e->getMessage() . PHP_EOL;
       });
 
       $this->logToChannel(settings: $settings, reason: $reason);
       $this->addUserTimeout(settings: $settings, module: $module, reason: $reason_timeout, channel: $channel);
       $this->getMemoryUsage(text: '[-] Del Message');
+    }, function (Exception $e) {
+      echo 'Error: ' . $e->getMessage() . PHP_EOL;
     });
   }
 
@@ -176,11 +182,15 @@ final class MessageProcessor
         $getDelText = MessageBuilder::new()->setContent($text_string);
         $this->discord->rest->channel->createMessage($this->message->channel_id, $getDelText)->then(function (Message $message) {
           $this->loop->addTimer(6.5, fn () => $this->discord->rest->channel->deleteMessage($message->channel_id, $message->id));
+        }, function (Exception $e) {
+          echo 'Error: ' . $e->getMessage() . PHP_EOL;
         });
 
         $this->logToChannel(settings: $settings, reason: $reason);
         $this->addUserTimeout(settings: $settings, module: $module, reason: $reason_timeout, channel: $channel);
         $this->getMemoryUsage(text: '[-] Del Sticker');
+      }, function (Exception $e) {
+        echo 'Error: ' . $e->getMessage() . PHP_EOL;
       });
     }
   }
@@ -286,7 +296,9 @@ final class MessageProcessor
       $webhook = getOneWebhook(webhooks: $webhooks);
 
       if (!$webhook) {
-        $avatarContents = await($filesystem->file(self::AVATAR)->getContents());
+        // $avatarContents = await($filesystem->file(self::AVATAR)->getContents());
+        $avatarContents = file_get_contents(self::AVATAR);
+
         $data = CreateWebhookBuilder::new()
           ->setName($this->lng->trans('name'))
           ->setAvatar($avatarContents, ImageData::PNG);
