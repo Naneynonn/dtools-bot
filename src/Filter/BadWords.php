@@ -57,7 +57,7 @@ class BadWords
     $skip = $this->model->getBadWordsExeption(id: $this->channel->guild_id);
     $skip = $this->skipWords(skip: $skip);
 
-    $badword_check = $this->checkBadWords(message: $this->message->content, skip: $skip);
+    $badword_check = $this->checkBadWords(message: $this->message->content, skip: $skip, skipTypes: $this->settings['badwords_exclusion_flags']);
     if (!isset($badword_check['badwords'])) return reject($this->info(text: 'error api'));
 
     $reason = $this->lng->trans('embed.reason.foul-lang');
@@ -95,7 +95,7 @@ class BadWords
     $skip = $this->model->getBadWordsExeption(id: $this->channel->guild_id);
     $skip = $this->skipWords(skip: $skip);
 
-    $badword_check = $this->checkBadWords(message: $sticker->name, skip: $skip);
+    $badword_check = $this->checkBadWords(message: $sticker->name, skip: $skip, skipTypes: $this->settings['badwords_exclusion_flags']);
     if (!isset($badword_check['badwords'])) return reject($this->info(text: 'error api'));
 
     $reason = $this->lng->trans('embed.reason.foul-lang');
@@ -140,7 +140,7 @@ class BadWords
     $msg_premium = $this->getAllWordsAsString(); // Выведет составленное сообщение из слов
     $msg_ids = $this->getMessageIds();
 
-    $badword_check = $this->checkBadWords(message: $msg_premium, skip: $skip);
+    $badword_check = $this->checkBadWords(message: $msg_premium, skip: $skip, skipTypes: $this->settings['badwords_exclusion_flags']);
     if (!isset($badword_check['badwords'])) return reject($this->info(text: 'error api'));
 
     $reason = $this->lng->trans('embed.reason.foul-lang');
@@ -251,14 +251,15 @@ class BadWords
     return $skip;
   }
 
-  private function checkBadWords(string $message, string $skip): ?array
+  private function checkBadWords(string $message, string $skip, ?int $skipTypes = null): ?array
   {
     $url = 'https://api.discord.band/v1/badwords';
 
     $body = [
       "message" => $message,
       "type" => 1,
-      "skip" => $skip
+      "skip" => $skip,
+      "skipTypes" => $skipTypes
     ];
     $response_json = json_encode($body, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
