@@ -3,14 +3,11 @@
 namespace Naneynonn\Commands;
 
 use Ragnarok\Fenrir\Discord;
-
-use Ragnarok\Fenrir\Rest\Helpers\Command\CommandBuilder;
-use Ragnarok\Fenrir\Enums\ApplicationCommandTypes;
+use Ragnarok\Fenrir\Gateway\Events\Ready;
 
 use Ragnarok\Fenrir\Interaction\CommandInteraction;
 use Ragnarok\Fenrir\Interaction\Helpers\InteractionCallbackBuilder;
-use Ragnarok\Fenrir\Rest\Helpers\Command\CommandOptionBuilder;
-use Ragnarok\Fenrir\Enums\ApplicationCommandOptionType;
+
 use Ragnarok\Fenrir\Enums\InteractionCallbackType;
 use Ragnarok\Fenrir\Enums\MessageFlag;
 use Ragnarok\Fenrir\Enums\Permission;
@@ -21,54 +18,60 @@ use Naneynonn\Language;
 use Naneynonn\Memory;
 use Naneynonn\Model;
 use Naneynonn\Embeds;
+use Naneynonn\CacheHelper;
 
+use Naneynonn\Attr\Command;
+
+#[Command(name: 'lang')]
 class Lang
 {
   use Memory;
 
   private Discord $discord;
   private Language $lng;
+  private Ready $ready;
+  private CacheHelper $cache;
 
-  public function __construct(Discord $discord, Language $lng)
+  public function __construct(Discord $discord, Language $lng, Ready $ready, CacheHelper $cache)
   {
     $this->discord = $discord;
     $this->lng = $lng;
   }
 
-  public function register(): CommandBuilder
-  {
-    return CommandBuilder::new()
-      ->setName('lang')
-      ->setDescription('Show bot language')
-      ->setDescriptionLocalizations([
-        'ru' => 'Показать язык бота',
-        'uk' => 'Показати мову бота'
-      ])
-      ->addOption(
-        CommandOptionBuilder::new()
-          ->setName('set')
-          ->setDescription('Set bot language')
-          ->setDescriptionLocalizations([
-            'ru' => 'Установить язык бота',
-            'uk' => 'Встановити мову бота'
-          ])
-          ->setType(ApplicationCommandOptionType::STRING)
-          ->setRequired(false)
-          ->addChoice(name: 'English', value: 'en', localizedNames: [
-            'ru' => 'Английский',
-            'uk' => 'Англійська',
-          ])
-          ->addChoice(name: 'Russian', value: 'ru', localizedNames: [
-            'ru' => 'Русский',
-            'uk' => 'Російська',
-          ])
-          ->addChoice(name: 'Ukrainian', value: 'uk', localizedNames: [
-            'ru' => 'Украинский',
-            'uk' => 'Українська',
-          ])
-      )
-      ->setType(ApplicationCommandTypes::CHAT_INPUT);
-  }
+  // public function register(): CommandBuilder
+  // {
+  //   return CommandBuilder::new()
+  //     ->setName('lang')
+  //     ->setDescription('Show bot language')
+  //     ->setDescriptionLocalizations([
+  //       'ru' => 'Показать язык бота',
+  //       'uk' => 'Показати мову бота'
+  //     ])
+  //     ->addOption(
+  //       CommandOptionBuilder::new()
+  //         ->setName('set')
+  //         ->setDescription('Set bot language')
+  //         ->setDescriptionLocalizations([
+  //           'ru' => 'Установить язык бота',
+  //           'uk' => 'Встановити мову бота'
+  //         ])
+  //         ->setType(ApplicationCommandOptionType::STRING)
+  //         ->setRequired(false)
+  //         ->addChoice(name: 'English', value: 'en', localizedNames: [
+  //           'ru' => 'Английский',
+  //           'uk' => 'Англійська',
+  //         ])
+  //         ->addChoice(name: 'Russian', value: 'ru', localizedNames: [
+  //           'ru' => 'Русский',
+  //           'uk' => 'Російська',
+  //         ])
+  //         ->addChoice(name: 'Ukrainian', value: 'uk', localizedNames: [
+  //           'ru' => 'Украинский',
+  //           'uk' => 'Українська',
+  //         ])
+  //     )
+  //     ->setType(ApplicationCommandTypes::CHAT_INPUT);
+  // }
 
   public function handle(CommandInteraction $command): void
   {
