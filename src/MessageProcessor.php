@@ -33,7 +33,6 @@ use Predis\Client;
 use Carbon\Carbon;
 
 use React\EventLoop\Loop;
-use React\Filesystem\Filesystem;
 
 use function React\Promise\any;
 use function React\Async\await;
@@ -63,12 +62,9 @@ final class MessageProcessor
 
   public function process(): void
   {
+    if (($this->message->author->bot ?? false) || empty($this->message) || (empty($this->message->content) && empty($this->message->sticker_items))) return;
+
     async(function () {
-      if (($this->message->author->bot ?? false) || empty($this->message)) return;
-      if (empty($this->message->content) && empty($this->message->sticker_items)) return;
-
-      // $start = microtime(true);
-
       $channel = await($this->cache->cachedRequest(
         fn: fn () => $this->discord->rest->channel->get($this->message->channel_id),
         params: ['channel_id' => $this->message->channel_id]
@@ -86,8 +82,6 @@ final class MessageProcessor
       } else {
         $this->startCode(channel: $channel);
       }
-
-      // echo 'Время выполнения скрипта: ' . round(microtime(true) - $start, 4) . ' сек.' . PHP_EOL;
     })();
   }
 
@@ -116,17 +110,18 @@ final class MessageProcessor
 
   private function processContent(Model $model, Channel $channel, array $settings, array $perm, ?GuildMember $member = null): void
   {
+    $params = [$this->message, $this->lng, $settings, $perm, $channel, $member];
+    $paramsBadWords = [$this->message, $this->lng, $settings, $perm, $model, $channel, $member];
 
-    $bad = new BadWords(message: $this->message, lng: $this->lng, settings: $settings, perm: $perm, model: $model, channel: $channel, member: $member);
+    $bad = new BadWords(...$paramsBadWords);
     $promises = [
-      (new Caps(message: $this->message, lng: $this->lng, settings: $settings, perm: $perm, channel: $channel, member: $member))->process(),
-      (new Replace(message: $this->message, lng: $this->lng, settings: $settings, perm: $perm, channel: $channel, member: $member))->process(),
-      (new Zalgo(message: $this->message, lng: $this->lng, settings: $settings, perm: $perm, channel: $channel, member: $member))->process(),
-      (new Duplicate(message: $this->message, lng: $this->lng, settings: $settings, perm: $perm, channel: $channel, member: $member))->process(),
-      (new BadWords(message: $this->message, lng: $this->lng, settings: $settings, perm: $perm, model: $model, channel: $channel, member: $member))->process(),
+      (new Caps(...$params))->process(),
+      (new Replace(...$params))->process(),
+      (new Zalgo(...$params))->process(),
+      (new Duplicate(...$params))->process(),
       $bad->process(),
       $bad->processLazyWords(),
-      (new Russian(message: $this->message, lng: $this->lng, settings: $settings, perm: $perm, channel: $channel, member: $member))->process()
+      (new Russian(...$params))->process()
     ];
 
     any($promises)->then(function ($result) use ($settings, $channel) {
@@ -282,9 +277,7 @@ final class MessageProcessor
 
   private function validateWebhook(array $settings, callable $callback): void
   {
-    $filesystem = Filesystem::create($this->loop);
-
-    async(function () use ($filesystem, $settings, $callback) {
+    async(function () use ($settings, $callback) {
       // $key = ['channel_id' => $settings['log_channel']];
 
       // $webhooks = await($this->cache->cachedRequest(
@@ -296,7 +289,6 @@ final class MessageProcessor
       $webhook = getOneWebhook(webhooks: $webhooks);
 
       if (!$webhook) {
-        // $avatarContents = await($filesystem->file(self::AVATAR)->getContents());
         $avatarContents = file_get_contents(self::AVATAR);
 
         $data = CreateWebhookBuilder::new()
