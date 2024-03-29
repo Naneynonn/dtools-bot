@@ -47,6 +47,7 @@ class Init
   {
     // $log = new Logger('Fenrir', [new StreamHandler('php://stdout')]); // Log to stdout (terminal output)
     $log = (new Logger('Fenrir'))->pushHandler(new StreamHandler("logs/fnrr-{$this->shardId}.log", Level::Info));
+    // $log = (new Logger('Fenrir'))->pushHandler(new StreamHandler("logs/fnrr-{$this->shardId}.log", Level::Debug));
 
     $discord = (new Discord(
       token: self::TOKEN,
