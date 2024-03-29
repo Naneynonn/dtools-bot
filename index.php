@@ -28,13 +28,14 @@ $cache = new CacheHelper();
 $interactionHandler = new InteractionHandler();
 $discord->registerExtension($interactionHandler);
 
-$init->loadCommands($interactionHandler, $lng, $discord);
+// $init->loadCommands($interactionHandler, $lng, $discord);
 
 $discord->gateway->events->once(Events::READY, function (Ready $event) use ($discord, $init, $lng, $cache) {
   $init->setPresence(discord: $discord);
 
   $loader = new Loader($discord, $lng, $event, $cache);
   $loader->loadEvents();
+  $loader->loadCommands();
 
   $init->getBotInfo(event: $event);
 });
