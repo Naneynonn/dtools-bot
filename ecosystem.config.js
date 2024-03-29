@@ -2,10 +2,12 @@ const shardCount = 2;
 
 module.exports = {
   apps: Array.from({ length: shardCount }, (_, i) => {
-    const appName = `dtools${i}-fnrr`;
+    const appName = `dtools${i}`;
+    const namespace = `fenrir`;
 
     return {
       name: appName,
+      namespace: namespace,
       script: "index.php",
       interpreter: "php",
       max_memory_restart: "200M",
