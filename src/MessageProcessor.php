@@ -131,9 +131,10 @@ final class MessageProcessor
       $reason_del = isset($result['reason']['delete']) ? $result['reason']['delete'] : $this->lng->trans('delete.' . $module);
 
       if (!empty($result['lazy'])) {
-        foreach ($result['lazy']['ids'] as $del_id) {
-          $this->discord->rest->channel->deleteMessage(channelId: $this->message->channel_id, messageId: $del_id);
-        }
+        $this->discord->rest->channel->bulkDeleteMessages(channelId: $this->message->channel_id, messageIds: $result['lazy']['ids'], reason: 'BadWords');
+        // foreach ($result['lazy']['ids'] as $del_id) {
+        //   $this->discord->rest->channel->deleteMessage(channelId: $this->message->channel_id, messageId: $del_id);
+        // }
         $this->message->content = $result['lazy']['message'];
       } else {
         $this->discord->rest->channel->deleteMessage(channelId: $this->message->channel_id, messageId: $this->message->id);
