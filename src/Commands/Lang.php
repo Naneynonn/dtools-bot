@@ -82,10 +82,15 @@ class Lang
       ->setFlags(MessageFlag::EPHEMERAL->value)
       ->setType(InteractionCallbackType::CHANNEL_MESSAGE_WITH_SOURCE);
 
-    if (hasPermission(bitmask: $interaction->member->permissions, permission: Permission::ADMINISTRATOR)) {
-      $this->handleAdminCommand(command: $command, interaction: $interaction, callback: $callback);
-    } else {
+    // Если команду используют в ЛС
+    if (is_null($interaction?->guild_id)) {
       $callback->setContent(content: Embeds::noPerm(lng: $this->lng));
+    } else {
+      if (hasPermission(bitmask: $interaction->member->permissions, permission: Permission::ADMINISTRATOR)) {
+        $this->handleAdminCommand(command: $command, interaction: $interaction, callback: $callback);
+      } else {
+        $callback->setContent(content: Embeds::noPerm(lng: $this->lng));
+      }
     }
 
     $command->createInteractionResponse($callback);
