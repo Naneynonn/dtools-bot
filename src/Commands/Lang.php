@@ -83,7 +83,7 @@ class Lang
       ->setType(InteractionCallbackType::CHANNEL_MESSAGE_WITH_SOURCE);
 
     // Если команду используют в ЛС
-    if (is_null($interaction?->guild_id)) {
+    if (is_null($interaction->guild_id ?? null)) {
       $callback->setContent(content: Embeds::noPerm(lng: $this->lng));
     } else {
       if (hasPermission(bitmask: $interaction->member->permissions, permission: Permission::ADMINISTRATOR)) {
