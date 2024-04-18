@@ -20,20 +20,18 @@ class CacheHelper
 
   public function cachedRequest(callable $fn, array $params, int $ttl = 3600): PromiseInterface
   {
-    return async(function () use ($fn, $params, $ttl) {
-      $key = $this->generateCacheKey($params);
+    $key = $this->generateCacheKey($params);
 
-      $cachedResult = await($this->cache->get($key));
+    $cachedResult = $this->cache->get($key);
 
-      if (!is_null($cachedResult)) {
-        return $cachedResult;
-      }
+    if (!is_null(await($cachedResult))) {
+      return $cachedResult;
+    }
 
-      $result = await($fn());
-      $this->cache->set($key, $result, $ttl);
+    $result = $fn();
+    $this->cache->set($key, $result, $ttl);
 
-      return $result;
-    })();
+    return $result;
   }
 
   private function generateCacheKey(array $params): string
