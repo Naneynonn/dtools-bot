@@ -31,7 +31,6 @@ use Naneynonn\Filter\Russian;
 
 use Predis\Client;
 use Carbon\Carbon;
-
 use React\EventLoop\Loop;
 
 use function React\Promise\any;
@@ -65,22 +64,26 @@ final class MessageProcessor
     if (($this->message->author->bot ?? false) || empty($this->message) || (empty($this->message->content) && empty($this->message->sticker_items))) return;
 
     async(function () {
-      $channel = await($this->cache->cachedRequest(
-        fn: fn () => $this->discord->rest->channel->get($this->message->channel_id),
-        params: ['channel_id' => $this->message->channel_id]
-      ));
-
-      if (empty($this->message->member)) {
-        $member = await($this->cache->cachedRequest(
-          fn: fn () => $this->discord->rest->guild->getMember(guildId: $channel->guild_id, memberId: $this->message->author->id),
-          params: [
-            'guild_id' => $channel->guild_id,
-            'member_id' => $this->message->author->id
-          ]
+      try {
+        $channel = await($this->cache->cachedRequest(
+          fn: fn () => $this->discord->rest->channel->get($this->message->channel_id),
+          params: ['channel_id' => $this->message->channel_id]
         ));
-        $this->startCode(channel: $channel, member: $member);
-      } else {
-        $this->startCode(channel: $channel);
+
+        if (empty($this->message->member)) {
+          $member = await($this->cache->cachedRequest(
+            fn: fn () => $this->discord->rest->guild->getMember(guildId: $channel->guild_id, memberId: $this->message->author->id),
+            params: [
+              'guild_id' => $channel->guild_id,
+              'member_id' => $this->message->author->id
+            ]
+          ));
+          $this->startCode(channel: $channel, member: $member);
+        } else {
+          $this->startCode(channel: $channel);
+        }
+      } catch (\Throwable $th) {
+        echo 'Err Message Async: ' . $th->getMessage();
       }
     })();
   }
@@ -94,7 +97,6 @@ final class MessageProcessor
     if (!$settings || !$settings['is_enable']) return;
 
     $perm = $model->getServerPerm(id: $channel->guild_id, module: 'automod');
-
     if (getIgnoredPermissions(perm: $perm, message: $this->message, parent_id: $channel->parent_id, selection: 'all', member: $member)) return;
 
     $this->lng->setLocale($settings['lang']);
@@ -132,9 +134,6 @@ final class MessageProcessor
 
       if (!empty($result['lazy'])) {
         $this->discord->rest->channel->bulkDeleteMessages(channelId: $this->message->channel_id, messageIds: $result['lazy']['ids'], reason: 'BadWords');
-        // foreach ($result['lazy']['ids'] as $del_id) {
-        //   $this->discord->rest->channel->deleteMessage(channelId: $this->message->channel_id, messageId: $del_id);
-        // }
         $this->message->content = $result['lazy']['message'];
       } else {
         $this->discord->rest->channel->deleteMessage(channelId: $this->message->channel_id, messageId: $this->message->id);
@@ -143,16 +142,19 @@ final class MessageProcessor
       $text_string = outputString(settings: $settings, module: $module, message: $this->message, reason: $reason_del);
       $getDelText = MessageBuilder::new()->setContent($text_string);
       $this->discord->rest->channel->createMessage($this->message->channel_id, $getDelText)->then(function (Message $message) use ($settings, $module) {
-        $this->loop->addTimer($settings[$module . '_delete_after_seconds'], fn () => $this->discord->rest->channel->deleteMessage($message->channel_id, $message->id));
-      }, function (Exception $e) {
-        echo 'Error: ' . $e->getMessage() . PHP_EOL;
+        $this->loop->addTimer(
+          $settings[$module . '_delete_after_seconds'],
+          fn () => $this->discord->rest->channel->deleteMessage($message->channel_id, $message->id)
+        );
+      })->otherwise(function (Exception $e) {
+        echo 'Error createMessage: ' . $e->getMessage() . PHP_EOL;
       });
 
       $this->logToChannel(settings: $settings, reason: $reason);
       $this->addUserTimeout(settings: $settings, module: $module, reason: $reason_timeout, channel: $channel);
       $this->getMemoryUsage(text: '[-] Del Message');
-    }, function (Exception $e) {
-      echo 'Error: ' . $e->getMessage() . PHP_EOL;
+    })->otherwise(function (Exception $e) {
+      echo 'Error any: ' . $e->getMessage() . PHP_EOL;
     });
   }
 
@@ -176,17 +178,20 @@ final class MessageProcessor
 
         $text_string = outputString(settings: $settings, module: $module, message: $this->message, reason: $reason_del);
         $getDelText = MessageBuilder::new()->setContent($text_string);
-        $this->discord->rest->channel->createMessage($this->message->channel_id, $getDelText)->then(function (Message $message) {
-          $this->loop->addTimer(6.5, fn () => $this->discord->rest->channel->deleteMessage($message->channel_id, $message->id));
-        }, function (Exception $e) {
-          echo 'Error: ' . $e->getMessage() . PHP_EOL;
+        $this->discord->rest->channel->createMessage($this->message->channel_id, $getDelText)->then(function (Message $message) use ($settings, $module) {
+          $this->loop->addTimer(
+            $settings[$module . '_delete_after_seconds'],
+            fn () => $this->discord->rest->channel->deleteMessage($message->channel_id, $message->id)
+          );
+        })->otherwise(function (Exception $e) {
+          echo 'Error sticker createMessage: ' . $e->getMessage() . PHP_EOL;
         });
 
         $this->logToChannel(settings: $settings, reason: $reason);
         $this->addUserTimeout(settings: $settings, module: $module, reason: $reason_timeout, channel: $channel);
         $this->getMemoryUsage(text: '[-] Del Sticker');
-      }, function (Exception $e) {
-        echo 'Error: ' . $e->getMessage() . PHP_EOL;
+      })->otherwise(function (Exception $e) {
+        echo 'Error sticker any: ' . $e->getMessage() . PHP_EOL;
       });
     }
   }
@@ -218,28 +223,6 @@ final class MessageProcessor
       Embeds::timeoutMember(webhook: $webhook, message: $this->message, lng: $this->lng, reason: $reason, count: $settings[$warnings], timeout: $settings[$timeout]);
     });
   }
-
-  // private function isTimeTimeout(int $warnings, bool $status, int $time, string $module): bool
-  // {
-  //   if (!$status) return false;
-
-  //   $user_id = $this->message->author->id;
-
-  //   $client = new Client();
-  //   $key = "bot:{$module}:{$user_id}";
-
-  //   if ($client->exists(key: $key)) {
-  //     $count = $client->incr(key: $key);
-  //     if ($count >= $warnings) {
-  //       $client->del(key: $key);
-  //       return true;
-  //     }
-  //   } else {
-  //     $client->setex(key: $key, seconds: $time, value: 1);
-  //   }
-
-  //   return false;
-  // }
 
   private function isTimeTimeout(int $warnings, bool $status, int $time, string $module): bool
   {
@@ -279,14 +262,7 @@ final class MessageProcessor
   private function validateWebhook(array $settings, callable $callback): void
   {
     async(function () use ($settings, $callback) {
-      // $key = ['channel_id' => $settings['log_channel']];
-
-      // $webhooks = await($this->cache->cachedRequest(
-      //   fn: fn () => $this->discord->rest->webhook->getChannelWebhooks(channelId: $settings['log_channel']),
-      //   params: $key
-      // ));
       $webhooks = await($this->discord->rest->webhook->getChannelWebhooks(channelId: $settings['log_channel']));
-
       $webhook = getOneWebhook(webhooks: $webhooks);
 
       if (!$webhook) {
@@ -303,7 +279,6 @@ final class MessageProcessor
         ));
 
         $callback($newWebhook);
-        // $this->cache->delete($key);
       } else {
         $callback($webhook);
       }

@@ -39,11 +39,6 @@ class GuildCreateEvent
 
   public function handle(GuildCreate $event): void
   {
-    // if (empty($event->id)) {
-    //   print_r($event);
-    //   die();
-    // }
-
     if ($this->isStart($event->id)) {
       $this->handleStart($event);
     } else {
@@ -53,7 +48,7 @@ class GuildCreateEvent
 
   private function isStart(string $guildId): bool
   {
-    // Ваша логика проверки: является ли это запуском для данной гильдии.
+    // Первый запуск бота
     // Возможно, проверить присутствие гильдии в списке гильдий из $this->ready.
     return in_array($guildId, array_map(fn ($guild) => $guild->id, $this->ready->guilds));
   }
@@ -61,10 +56,7 @@ class GuildCreateEvent
   private function handleStart(GuildCreate $event): void
   {
     // Логика, которая выполняется при первом запуске бота для данной гильдии.
-
     $this->addGuild(event: $event);
-
-    // $this->getMemoryUsage(text: "[~] STARTUP::GUILD_CREATE | ID: {$event->id}");
   }
 
   private function handleRegular(GuildCreate $event): void

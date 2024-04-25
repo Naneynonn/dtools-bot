@@ -37,7 +37,6 @@ class GuildDeleteEvent
   {
     if (empty($event) || is_object_empty($event)) return;
 
-
     $existingIds = array_column($this->ready->guilds, 'id');
     $guildKey = array_search($event->id, $existingIds, true);
 

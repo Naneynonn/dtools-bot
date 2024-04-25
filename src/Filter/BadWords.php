@@ -14,10 +14,12 @@ use Naneynonn\Language;
 use Naneynonn\Model;
 use Naneynonn\Config;
 
+use function React\Async\await;
 use function React\Promise\reject;
 use function React\Promise\resolve;
 
 use Predis\Client;
+use React\Http\Browser;
 
 class BadWords
 {
@@ -49,16 +51,39 @@ class BadWords
     $this->member = $member;
   }
 
+  // TODO: Вынести как общий метод
+  private function isModuleDisabled(): bool
+  {
+    return !$this->settings['is_' . self::TYPE . '_status'];
+  }
+
+  // TODO: Вынести как общий метод
+  private function isPremium(): bool
+  {
+    return $this->settings['premium'] >= gmdate('Y-m-d H:i:s.u');
+  }
+
+  // TODO: Вынести как общий метод
+  private function isIgnoredPerm(): bool
+  {
+    return getIgnoredPermissions(perm: $this->perm, message: $this->message, member: $this->member, parent_id: $this->channel->parent_id, selection: self::TYPE);
+  }
+
+  // TODO: Вынести как общий метод
+  private function sendReject(string $text): PromiseInterface
+  {
+    return reject(ucfirst(self::TYPE) . ' | ' . $text);
+  }
+
   public function process(): PromiseInterface
   {
-    if (!$this->settings['is_' . self::TYPE . '_status']) return reject($this->info(text: 'disable'));
+    if ($this->isModuleDisabled()) return $this->sendReject(text: 'Disabled');
 
-    // Load BadWords Exceptions
-    $skip = $this->model->getBadWordsExeption(id: $this->channel->guild_id);
-    $skip = $this->skipWords(skip: $skip);
+    $skip = $this->getSkipWords();
 
-    $badword_check = $this->checkBadWords(message: $this->message->content, skip: $skip, skipTypes: $this->settings['badwords_exclusion_flags']);
-    if (!isset($badword_check['badwords'])) return reject($this->info(text: 'error api'));
+    $badword_check = $this->fetchBadWords(message: $this->message->content, skip: $skip, skipTypes: $this->settings['badwords_exclusion_flags']);
+    if (!isset($badword_check['badwords'])) return $this->sendReject(text: 'Err API');
+    if (!$badword_check['badwords']) return $this->sendReject(text: 'No Badwords');
 
     $reason = $this->lng->trans('embed.reason.foul-lang');
     $reason_del = $this->lng->trans('delete.badwords.foul');
@@ -68,13 +93,7 @@ class BadWords
       $reason_del = $reason_list['message'];
     }
 
-    $badword = $badword_check['badwords'];
-    if (!$badword) return reject($this->info(text: 'no badwords'));
-
-    // вынести getIgnoredPermissions в MessageProcessor
-    if (getIgnoredPermissions(perm: $this->perm, message: $this->message, member: $this->member, parent_id: $this->channel->parent_id, selection: self::TYPE)) {
-      return reject($this->info(text: 'ignored perm'));
-    }
+    if ($this->isIgnoredPerm()) return $this->sendReject(text: 'Ignored Perm');
 
     return resolve([
       'module' => self::TYPE,
@@ -89,14 +108,13 @@ class BadWords
   // TODO: проверять будет каждый стикер и вызывать
   public function processStickers(object $sticker): PromiseInterface
   {
-    if (!$this->settings['is_' . self::TYPE . '_status']) return reject($this->info(text: 'disable'));
+    if ($this->isModuleDisabled()) return $this->sendReject(text: 'Disabled');
 
-    // Load BadWords Exceptions
-    $skip = $this->model->getBadWordsExeption(id: $this->channel->guild_id);
-    $skip = $this->skipWords(skip: $skip);
+    $skip = $this->getSkipWords();
 
-    $badword_check = $this->checkBadWords(message: $sticker->name, skip: $skip, skipTypes: $this->settings['badwords_exclusion_flags']);
-    if (!isset($badword_check['badwords'])) return reject($this->info(text: 'error api'));
+    $badword_check = $this->fetchBadWords(message: $sticker->name, skip: $skip, skipTypes: $this->settings['badwords_exclusion_flags']);
+    if (!isset($badword_check['badwords'])) return $this->sendReject(text: 'Err API');
+    if (!$badword_check['badwords']) return $this->sendReject(text: 'No Badwords');
 
     $reason = $this->lng->trans('embed.reason.foul-lang');
     $reason_del = $this->lng->trans('delete.badwords.foul');
@@ -106,11 +124,7 @@ class BadWords
       $reason_del = $reason_list['message'];
     }
 
-    $badword = $badword_check['badwords'];
-    if (!$badword) return reject($this->info(text: 'no badwords'));
-
-    // вынести getIgnoredPermissions в MessageProcessor
-    if (getIgnoredPermissions(perm: $this->perm, message: $this->message, member: $this->member, parent_id: $this->channel->parent_id, selection: self::TYPE)) return reject($this->info(text: 'ignored perm'));
+    if ($this->isIgnoredPerm()) return $this->sendReject(text: 'Ignored Perm');
 
     return resolve([
       'module' => self::TYPE,
@@ -127,21 +141,19 @@ class BadWords
   {
     $msg_premium = '';
 
-    if (!$this->settings['is_' . self::TYPE . '_status']) return reject($this->info(text: 'disable'));
-    if ($this->settings['premium'] <= gmdate('Y-m-d H:i:s.u')) return reject($this->info(text: 'no premium'));
+    if ($this->isModuleDisabled()) return $this->sendReject(text: 'Disabled');
+    if (!$this->isPremium()) return $this->sendReject(text: 'No Premium');
 
-    // Load BadWords Exceptions
-    $skip = $this->model->getBadWordsExeption(id: $this->channel->guild_id);
-    $skip = $this->skipWords(skip: $skip);
-
+    $skip = $this->getSkipWords();
 
     $this->redis = new Client();
     $this->addMessageInRedis(message: $this->message->content);
     $msg_premium = $this->getAllWordsAsString(); // Выведет составленное сообщение из слов
     $msg_ids = $this->getMessageIds();
 
-    $badword_check = $this->checkBadWords(message: $msg_premium, skip: $skip, skipTypes: $this->settings['badwords_exclusion_flags']);
-    if (!isset($badword_check['badwords'])) return reject($this->info(text: 'error api'));
+    $badword_check = $this->fetchBadWords(message: $msg_premium, skip: $skip, skipTypes: $this->settings['badwords_exclusion_flags']);
+    if (!isset($badword_check['badwords'])) return $this->sendReject(text: 'Err API');
+    if (!$badword_check['badwords']) return $this->sendReject(text: 'No Badwords');
 
     $reason = $this->lng->trans('embed.reason.foul-lang');
     $reason_del = $this->lng->trans('delete.badwords.foul');
@@ -151,16 +163,10 @@ class BadWords
       $reason_del = $reason_list['message'];
     }
 
-    $badword = $badword_check['badwords'];
-    if (!$badword) return reject($this->info(text: 'no badwords'));
-
     // очищаем если что-то нашло
     $this->clearAllWords();
 
-    // вынести getIgnoredPermissions в MessageProcessor
-    if (getIgnoredPermissions(perm: $this->perm, message: $this->message, member: $this->member, parent_id: $this->channel->parent_id, selection: self::TYPE)) {
-      return reject($this->info(text: 'ignored perm'));
-    }
+    if ($this->isIgnoredPerm()) return $this->sendReject(text: 'Ignored Perm');
 
     $result = [
       'module' => self::TYPE,
@@ -241,6 +247,12 @@ class BadWords
     return $messageIds;
   }
 
+  private function getSkipWords(): string
+  {
+    $skip = $this->model->getBadWordsExeption(id: $this->channel->guild_id);
+    return $this->skipWords(skip: $skip);
+  }
+
   private function skipWords(array $skip): string
   {
     if (!$skip) $skip = '';
@@ -251,37 +263,24 @@ class BadWords
     return $skip;
   }
 
-  private function checkBadWords(string $message, string $skip, ?int $skipTypes = null): ?array
+  private function fetchBadWords(string $message, string $skip, ?int $skipTypes = null): ?array
   {
-    $url = 'https://api.discord.band/v1/badwords';
+    $client = new Browser();
 
-    $body = [
+    $url = 'https://api.discord.band/v1/badwords';
+    $body = json_encode([
       "message" => $message,
       "type" => 1,
       "skip" => $skip,
       "skipTypes" => $skipTypes
+    ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    $headers = [
+      'Content-Type' => 'application/json',
+      'Authorization' => 'Bearer ' . self::API_TOKEN
     ];
-    $response_json = json_encode($body, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, $url);
-    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
-    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json', 'Authorization: Bearer ' . self::API_TOKEN]);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 1);
-    curl_setopt($ch, CURLOPT_USERAGENT, "DTools-Bot/1.0 (+https://discordtools.cc)");
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $response_json);
-    $response = curl_exec($ch);
-    curl_close($ch);
-    $results = json_decode($response, true);
-
-    return $results;
-  }
-
-  private function info(string $text): string
-  {
-    return self::TYPE . ' | ' . $text;
+    $response = await($client->post(url: $url, headers: $headers, body: $body));
+    return json_decode((string) $response->getBody(), true);
   }
 
   private function decodeConditions(int $bitfield): array
