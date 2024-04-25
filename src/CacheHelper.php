@@ -5,7 +5,6 @@ namespace Naneynonn;
 use React\Cache\ArrayCache;
 use React\Promise\PromiseInterface;
 
-use function React\Async\async;
 use function React\Async\await;
 
 class CacheHelper
