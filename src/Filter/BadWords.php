@@ -148,7 +148,10 @@ class BadWords
 
     $this->redis = new Client();
     $this->addMessageInRedis(message: $this->message->content);
+
     $msg_premium = $this->getAllWordsAsString(); // Выведет составленное сообщение из слов
+    if (empty($msg_premium)) return $this->sendReject(text: 'No Words');
+
     $msg_ids = $this->getMessageIds();
 
     $badword_check = $this->fetchBadWords(message: $msg_premium, skip: $skip, skipTypes: $this->settings['badwords_exclusion_flags']);
@@ -276,10 +279,17 @@ class BadWords
     ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     $headers = [
       'Content-Type' => 'application/json',
-      'Authorization' => 'Bearer ' . self::API_TOKEN
+      'Authorization' => 'Bearer ' . self::API_TOKEN,
+      'User-Agent' => 'DTools-Bot/1.0 (+https://discordtools.cc)'
     ];
 
-    $response = await($client->post(url: $url, headers: $headers, body: $body));
+    try {
+      $response = await($client->post(url: $url, headers: $headers, body: $body));
+    } catch (\Exception $e) {
+      echo 'Err fetch bw: ' .  $e->getMessage(), PHP_EOL;
+      return null;
+    }
+
     return json_decode((string) $response->getBody(), true);
   }
 
