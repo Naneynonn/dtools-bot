@@ -29,6 +29,7 @@ final class Embeds
 
     $channel = "<#{$message->channel_id}>";
     $author = '<@' . $message->author->id . '>';
+    $content = mb_strimwidth($message->content, 0, 1000, "...");
 
     $embed = (new DiscordEmbedMessage())
       ->setUsername($lng->trans('name'))
@@ -37,7 +38,7 @@ final class Embeds
       ->setAuthorIcon(author_icon: $icon)
       ->addField(title: $lng->trans('embed.channel'), value: $channel, inLine: true)
       ->addField(title: $lng->trans('embed.author'), value: "{$author} | `@{$message->author->username}`", inLine: true)
-      ->addField(title: $lng->trans('embed.message.content'), value: ">>> {$message->content}", inLine: false)
+      ->addField(title: $lng->trans('embed.message.content'), value: ">>> {$content}", inLine: false)
       ->addField(title: $lng->trans('embed.reason.name'), value: "> {$reason}", inLine: false)
       ->setFooterText(footer_text: $lng->trans('embed.message.id') . ": {$message->id}")
       ->setColor(color: $color)
