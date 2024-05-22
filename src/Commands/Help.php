@@ -1,9 +1,8 @@
 <?php
 
-namespace Naneynonn\Commands;
+declare(strict_types=1);
 
-use Ragnarok\Fenrir\Discord;
-use Ragnarok\Fenrir\Gateway\Events\Ready;
+namespace Naneynonn\Commands;
 
 use Ragnarok\Fenrir\Interaction\CommandInteraction;
 use Ragnarok\Fenrir\Interaction\Helpers\InteractionCallbackBuilder;
@@ -11,29 +10,13 @@ use Ragnarok\Fenrir\Interaction\Helpers\InteractionCallbackBuilder;
 use Ragnarok\Fenrir\Enums\InteractionCallbackType;
 use Ragnarok\Fenrir\Enums\MessageFlag;
 
-use Naneynonn\CacheHelper;
-use Naneynonn\Language;
-use Naneynonn\Memory;
 use Naneynonn\Embeds;
-
 use Naneynonn\Attr\Command;
+use Naneynonn\Core\App\CommandHelper;
 
 #[Command(name: 'help')]
-class Help
+class Help extends CommandHelper
 {
-  use Memory;
-
-  private Discord $discord;
-  private Language $lng;
-  private Ready $ready;
-  private CacheHelper $cache;
-
-  public function __construct(Discord $discord, Language $lng, Ready $ready, CacheHelper $cache)
-  {
-    $this->discord = $discord;
-    $this->lng = $lng;
-  }
-
   // public function register(): CommandBuilder
   // {
   //   return CommandBuilder::new()

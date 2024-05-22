@@ -1,9 +1,8 @@
 <?php
 
-namespace Naneynonn\Commands;
+declare(strict_types=1);
 
-use Ragnarok\Fenrir\Discord;
-use Ragnarok\Fenrir\Gateway\Events\Ready;
+namespace Naneynonn\Commands;
 
 use Ragnarok\Fenrir\Interaction\CommandInteraction;
 use Ragnarok\Fenrir\Interaction\Helpers\InteractionCallbackBuilder;
@@ -12,30 +11,17 @@ use Ragnarok\Fenrir\Enums\InteractionCallbackType;
 use Ragnarok\Fenrir\Enums\MessageFlag;
 use Ragnarok\Fenrir\Enums\Permission;
 
-use Naneynonn\Language;
-use Naneynonn\Memory;
 use Naneynonn\Embeds;
 use Naneynonn\Model;
 use Naneynonn\Attr\Command;
 use Naneynonn\Attr\SubCommand;
-use Naneynonn\CacheHelper;
+use Naneynonn\Core\App\CommandHelper;
+
+use function Naneynonn\hasPermission;
 
 #[Command(name: 'automod')]
-class Automod
+class Automod extends CommandHelper
 {
-  use Memory;
-
-  private Discord $discord;
-  private Language $lng;
-  private Ready $ready;
-  private CacheHelper $cache;
-
-  public function __construct(Discord $discord, Language $lng, Ready $ready, CacheHelper $cache)
-  {
-    $this->discord = $discord;
-    $this->lng = $lng;
-  }
-
   // public function register(): CommandBuilder
   // {
   //   return CommandBuilder::new()
@@ -229,7 +215,7 @@ class Automod
     if (is_null($interaction->guild_id ?? null)) {
       $callback->setContent(content: Embeds::noPerm(lng: $this->lng));
     } else {
-      if (hasPermission(bitmask: $interaction->member->permissions, permission: Permission::ADMINISTRATOR)) {
+      if (hasPermission(bitmask: (int) $interaction->member->permissions, permission: Permission::ADMINISTRATOR)) {
         $this->handleAdminCommand(command: $command, interaction: $interaction, callback: $callback);
       } else {
         $callback->setContent(content: Embeds::noPerm(lng: $this->lng));
