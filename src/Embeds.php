@@ -1,19 +1,24 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Naneynonn;
 
-use Ragnarok\Fenrir\Gateway\Events\MessageCreate;
+use Ragnarok\Fenrir\Discord;
 use Ragnarok\Fenrir\Parts\Message;
 use Ragnarok\Fenrir\Parts\Webhook;
 
 use Ragnarok\Fenrir\Gateway\Events\GuildCreate;
 use Ragnarok\Fenrir\Gateway\Events\GuildDelete;
+use Ragnarok\Fenrir\Gateway\Events\MessageCreate;
 
 use Ragnarok\Fenrir\Rest\Helpers\Channel\EmbedBuilder;
-use Ragnarok\Fenrir\Rest\Helpers\Channel\MessageBuilder;
+use Ragnarok\Fenrir\Rest\Helpers\Webhook\WebhookBuilder;
 
 use Woeler\DiscordPhp\Message\DiscordEmbedMessage;
 use Woeler\DiscordPhp\Webhook\DiscordWebhook;
+
+use Carbon\Carbon;
 
 use Naneynonn\Language;
 use Naneynonn\Config;
@@ -22,7 +27,12 @@ final class Embeds
 {
   use Config;
 
-  public static function messageDelete(Webhook $webhook, MessageCreate|Message $message, Language $lng, string $reason): void
+  private static function hexToDec(string $color): int|float
+  {
+    return hexdec(trim($color, '#'));
+  }
+
+  public static function messageDelete(Discord $discord, Webhook $webhook, MessageCreate|Message $message, Language $lng, string $reason): void
   {
     $icon = 'https://media.discordapp.net/attachments/686585233339842572/708784170729472080/message_gray_minus_red.png';
     $color = 13974845;
@@ -31,24 +41,27 @@ final class Embeds
     $author = '<@' . $message->author->id . '>';
     $content = mb_strimwidth($message->content, 0, 1000, "...");
 
-    $embed = (new DiscordEmbedMessage())
-      ->setUsername($lng->trans('name'))
-      ->setAvatar(self::AVATAR)
-      ->setAuthorName(author_name: $lng->trans('embed.message.delete'))
-      ->setAuthorIcon(author_icon: $icon)
-      ->addField(title: $lng->trans('embed.channel'), value: $channel, inLine: true)
-      ->addField(title: $lng->trans('embed.author'), value: "{$author} | `@{$message->author->username}`", inLine: true)
-      ->addField(title: $lng->trans('embed.message.content'), value: ">>> {$content}", inLine: false)
-      ->addField(title: $lng->trans('embed.reason.name'), value: "> {$reason}", inLine: false)
-      ->setFooterText(footer_text: $lng->trans('embed.message.id') . ": {$message->id}")
-      ->setColor(color: $color)
-      ->setTimestamp(timestamp: new \DateTime());
-
-    $wh = new DiscordWebhook(webhookUrl: $webhook->url);
-    $wh->send(message: $embed);
+    $discord->rest->webhook->execute(
+      webhookId: $webhook->id,
+      token: $webhook->token,
+      builder: WebhookBuilder::new()
+        ->setUsername($lng->trans('name'))
+        ->setAvatarUrl(self::AVATAR)
+        ->addEmbed(
+          EmbedBuilder::new()
+            ->setAuthor(name: $lng->trans('embed.message.delete'), iconUrl: $icon)
+            ->addField(name: $lng->trans('embed.channel'), value: $channel, inline: true)
+            ->addField(name: $lng->trans('embed.author'), value: "{$author} | `@{$message->author->username}`", inline: true)
+            ->addField(name: $lng->trans('embed.message.content'), value: ">>> {$content}", inline: false)
+            ->addField(name: $lng->trans('embed.reason.name'), value: "> {$reason}", inline: false)
+            ->setFooter(text: $lng->trans('embed.message.id') . ": {$message->id}")
+            ->setColor($color)
+            ->setTimestamp(Carbon::now())
+        )
+    );
   }
 
-  public static function timeoutMember(Webhook $webhook, MessageCreate|Message $message, Language $lng, string $reason, int $count, int $timeout): void
+  public static function timeoutMember(Discord $discord, Webhook $webhook, MessageCreate|Message $message, Language $lng, string $reason, int $count, int $timeout): void
   {
     $icon = 'https://media.discordapp.net/attachments/686585233339842572/708784067684073492/member_gray_ban_red.png';
     $color = 13974845;
@@ -64,20 +77,23 @@ final class Embeds
       $time = gmdate("H:i:s", $timeout);
     }
 
-    $embed = (new DiscordEmbedMessage())
-      ->setUsername($lng->trans('name'))
-      ->setAvatar(self::AVATAR)
-      ->setAuthorName(author_name: $lng->trans('embed.user.mute'))
-      ->setAuthorIcon(author_icon: $icon)
-      ->addField(title: $lng->trans('embed.author'), value: "{$author} | `@{$message->author->username}`", inLine: true)
-      ->addField(title: $lng->trans('embed.duration'), value: $time, inLine: true)
-      ->addField(title: $lng->trans('embed.reason.name'), value: "> {$reason}, {$v}", inLine: false)
-      ->setFooterText(footer_text: $lng->trans('embed.user.id') . ": {$message->author->id}")
-      ->setColor(color: $color)
-      ->setTimestamp(timestamp: new \DateTime());
-
-    $wh = new DiscordWebhook(webhookUrl: $webhook->url);
-    $wh->send(message: $embed);
+    $discord->rest->webhook->execute(
+      webhookId: $webhook->id,
+      token: $webhook->token,
+      builder: WebhookBuilder::new()
+        ->setUsername($lng->trans('name'))
+        ->setAvatarUrl(self::AVATAR)
+        ->addEmbed(
+          EmbedBuilder::new()
+            ->setAuthor(name: $lng->trans('embed.user.mute'), iconUrl: $icon)
+            ->addField(name: $lng->trans('embed.author'), value: "{$author} | `@{$message->author->username}`", inline: true)
+            ->addField(name: $lng->trans('embed.duration'), value: $time, inline: true)
+            ->addField(name: $lng->trans('embed.reason.name'), value: "> {$reason}, {$v}", inline: false)
+            ->setFooter(text: $lng->trans('embed.user.id') . ": {$message->id}")
+            ->setColor($color)
+            ->setTimestamp(Carbon::now())
+        )
+    );
   }
 
   public static function sendLogGuild(GuildCreate|GuildDelete $guild, bool $new = true): void
@@ -136,7 +152,7 @@ final class Embeds
 
   public static function getLang(Language $lng, string $lang): EmbedBuilder
   {
-    $color = hexdec(trim('#4f545c', '#'));
+    $color = self::hexToDec('#4f545c');
 
     return (new EmbedBuilder())
       ->setDescription($lng->trans('embed.lang.server', ['%lang%' => $lang]))
@@ -145,7 +161,7 @@ final class Embeds
 
   public static function response(string $color, string $title): EmbedBuilder
   {
-    $set_color = hexdec(trim($color, '#'));
+    $set_color = self::hexToDec($color);
 
     return (new EmbedBuilder())
       ->setDescription($title)
