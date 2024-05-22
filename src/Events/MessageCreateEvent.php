@@ -1,39 +1,22 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Naneynonn\Events;
 
-use Ragnarok\Fenrir\Discord;
 use Ragnarok\Fenrir\Gateway\Events\MessageCreate;
 use Ragnarok\Fenrir\Constants\Events;
-use Ragnarok\Fenrir\Gateway\Events\Ready;
 
 use Naneynonn\Attr\EventHandlerFor;
-
 use Naneynonn\MessageProcessor;
-use Naneynonn\Language;
-use Naneynonn\CacheHelper;
+use Naneynonn\Core\App\EventHelper;
 
 #[EventHandlerFor(Events::MESSAGE_CREATE)]
-class MessageCreateEvent
+class MessageCreateEvent extends EventHelper
 {
-  private Discord $discord;
-  private Language $lng;
-  private Ready $ready;
-  private CacheHelper $cache;
-
-  public function __construct(Discord $discord, Language $lng, Ready $ready, CacheHelper $cache)
-  {
-    $this->discord = $discord;
-    $this->lng = $lng;
-    $this->ready = $ready;
-    $this->cache = $cache;
-  }
-
   public function handle(MessageCreate $message): void
   {
-    if (empty($message)) return;
-
-    $processor = new MessageProcessor(message: $message, lng: $this->lng, discord: $this->discord, cache: $this->cache);
+    $processor = new MessageProcessor(message: $message, lng: $this->lng, discord: $this->discord, redis: $this->redis, loop: $this->loop);
     $processor->process();
   }
 }

@@ -1,41 +1,23 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Naneynonn\Events;
 
-use Ragnarok\Fenrir\Discord;
 use Ragnarok\Fenrir\Gateway\Events\GuildCreate;
 use Ragnarok\Fenrir\Constants\Events;
-use Ragnarok\Fenrir\Gateway\Events\Ready;
 
 use Naneynonn\Attr\EventHandlerFor;
 
-use Naneynonn\Language;
-use Naneynonn\Memory;
 use Naneynonn\Model;
 use Naneynonn\Embeds;
-use Naneynonn\CacheHelper;
-
+use Naneynonn\Core\App\EventHelper;
 use Ragnarok\Fenrir\Parts\UnavailableGuild;
 
 #[EventHandlerFor(Events::GUILD_CREATE)]
-class GuildCreateEvent
+class GuildCreateEvent extends EventHelper
 {
-  use Memory;
-
-  private Discord $discord;
-  private Language $lng;
-  private Ready $ready;
-  private CacheHelper $cache;
-
   private const LOCALE = ['en', 'uk', 'ru'];
-
-  public function __construct(Discord $discord, Language $lng, Ready $ready, CacheHelper $cache)
-  {
-    $this->discord = $discord;
-    $this->lng = $lng;
-    $this->ready = $ready;
-    $this->cache = $cache;
-  }
 
   public function handle(GuildCreate $event): void
   {
