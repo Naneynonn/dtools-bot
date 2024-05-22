@@ -1,5 +1,9 @@
 <?php
 
+declare(strict_types=1);
+
+namespace Naneynonn;
+
 use Ragnarok\Fenrir\Gateway\Events\MessageCreate;
 use Ragnarok\Fenrir\Gateway\Events\MessageUpdate;
 use Ragnarok\Fenrir\Parts\Message;
@@ -112,6 +116,9 @@ function outputString(array $settings, string $module, Message|MessageCreate|Mes
   return str_replace('%name%', $user_id, $reason);
 }
 
+/**
+ * @deprecated
+ */
 function getNormalEnd(int $num, string $for_1, string $for_2, string $for_5): string
 {
   $num = abs($num) % 100; // берем число по модулю и сбрасываем сотни (делим на 100, а остаток присваиваем переменной $num)
@@ -124,6 +131,9 @@ function getNormalEnd(int $num, string $for_1, string $for_2, string $for_5): st
   return $for_5;
 }
 
+/**
+ * @deprecated
+ */
 function wordEnd(int $num, string $name, Language $lng): string
 {
   $num = abs($num) % 100; // берем число по модулю и сбрасываем сотни (делим на 100, а остаток присваиваем переменной $num)
@@ -136,6 +146,9 @@ function wordEnd(int $num, string $name, Language $lng): string
   return $lng->trans("count.{$name}.5");
 }
 
+/**
+ * @deprecated
+ */
 function is_object_empty(object $object): bool
 {
   return empty((array) $object);
@@ -144,4 +157,9 @@ function is_object_empty(object $object): bool
 function hasPermission(int $bitmask, Permission $permission): bool
 {
   return ($bitmask & $permission->value) === $permission->value;
+}
+
+function isObjectEmpty(object $object): bool
+{
+  return empty((array) $object);
 }
