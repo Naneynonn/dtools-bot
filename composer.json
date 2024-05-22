@@ -4,11 +4,11 @@
     "symfony/translation": "^6.3",
     "symfony/yaml": "^6.3",
     "woeler/phpdiscord": "^4.0",
-    "predis/predis": "^2.2",
     "symfony/intl": "^6.3",
     "exan/fenrir": "^0.12.0",
     "monolog/monolog": "^3.5",
-    "react/http": "^1.9.0"
+    "react/http": "^1.9.0",
+    "clue/redis-react": "^2.7"
   },
   "autoload": {
     "psr-4": {
