@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Naneynonn;
 
 use Ragnarok\Fenrir\Discord;
@@ -20,7 +22,7 @@ use Naneynonn\Model;
 use Naneynonn\Embeds;
 use Naneynonn\Config;
 use Naneynonn\Memory;
-use Naneynonn\CacheHelper;
+use Naneynonn\Core\Cache\Cache;
 
 use Naneynonn\Filter\Caps;
 use Naneynonn\Filter\BadWords;
@@ -29,60 +31,79 @@ use Naneynonn\Filter\Zalgo;
 use Naneynonn\Filter\Duplicate;
 use Naneynonn\Filter\Russian;
 
-use Predis\Client;
 use Carbon\Carbon;
-use React\EventLoop\Loop;
+use Clue\React\Redis\LazyClient as RedisClient;
+use React\EventLoop\LoopInterface;
 
 use function React\Promise\any;
 use function React\Async\await;
 use function React\Async\async;
+use function Naneynonn\getIgnoredPermissions;
 
 use Exception;
+use Throwable;
 
 final class MessageProcessor
 {
-  use Config;
-  use Memory;
+  use Config, Memory;
 
   private MessageCreate|MessageUpdate $message;
   private Discord $discord;
   private Language $lng;
-  private CacheHelper $cache;
-  private $loop;
+  private RedisClient $redis;
+  private LoopInterface $loop;
 
-  public function __construct(MessageCreate|MessageUpdate $message, Discord $discord, Language $lng, CacheHelper $cache)
+  public function __construct(MessageCreate|MessageUpdate $message, Discord $discord, Language $lng, RedisClient $redis, LoopInterface $loop)
   {
     $this->message = $message;
     $this->discord = $discord;
     $this->lng = clone $lng;
-    $this->cache = $cache;
-    $this->loop = Loop::get();
+    $this->redis = $redis;
+    $this->loop = $loop;
+  }
+
+  private function isEmpty(): bool
+  {
+    return ($this->message->author->bot ?? false) || empty($this->message) || (empty($this->message->content) && empty($this->message->sticker_items));
+  }
+
+  private function getChannel(): Channel
+  {
+    return Cache::request(
+      redis: $this->redis,
+      fn: fn () => $this->discord->rest->channel->get($this->message->channel_id),
+      params: ['channel_id' => $this->message->channel_id]
+    );
+  }
+
+  private function getMember(Channel $channel): GuildMember
+  {
+    return Cache::request(
+      redis: $this->redis,
+      fn: fn () => $this->discord->rest->guild->getMember(guildId: $channel->guild_id, memberId: $this->message->author->id),
+      params: [
+        'guild_id' => $channel->guild_id,
+        'member_id' => $this->message->author->id
+      ]
+    );
   }
 
   public function process(): void
   {
-    if (($this->message->author->bot ?? false) || empty($this->message) || (empty($this->message->content) && empty($this->message->sticker_items))) return;
+    if ($this->isEmpty()) return;
 
     async(function () {
       try {
-        $channel = await($this->cache->cachedRequest(
-          fn: fn () => $this->discord->rest->channel->get($this->message->channel_id),
-          params: ['channel_id' => $this->message->channel_id]
-        ));
+        $channel = $this->getChannel();
+        $params = [$channel];
 
         if (empty($this->message->member)) {
-          $member = await($this->cache->cachedRequest(
-            fn: fn () => $this->discord->rest->guild->getMember(guildId: $channel->guild_id, memberId: $this->message->author->id),
-            params: [
-              'guild_id' => $channel->guild_id,
-              'member_id' => $this->message->author->id
-            ]
-          ));
-          $this->startCode(channel: $channel, member: $member);
-        } else {
-          $this->startCode(channel: $channel);
+          $member = $this->getMember(channel: $channel);
+          $params[] = $member;
         }
-      } catch (\Throwable $th) {
+
+        $this->startCode(...$params);
+      } catch (Throwable $th) {
         echo 'Err Message Async: ' . $th->getMessage();
       }
     })();
@@ -113,7 +134,7 @@ final class MessageProcessor
   private function processContent(Model $model, Channel $channel, array $settings, array $perm, ?GuildMember $member = null): void
   {
     $params = [$this->message, $this->lng, $settings, $perm, $channel, $member];
-    $paramsBadWords = [$this->message, $this->lng, $settings, $perm, $model, $channel, $member];
+    $paramsBadWords = [$this->message, $this->lng, $settings, $perm, $model, $channel, $member, $this->redis];
 
     $bad = new BadWords(...$paramsBadWords);
     $promises = [
@@ -200,9 +221,10 @@ final class MessageProcessor
   {
     if (empty($settings['log_channel'])) return;
 
-    $this->validateWebhook(settings: $settings, callback: function (Webhook $webhook) use ($reason) {
-      Embeds::messageDelete(webhook: $webhook, message: $this->message, lng: $this->lng, reason: $reason);
-    });
+    $this->validateWebhook(
+      settings: $settings,
+      callback: fn (Webhook $webhook) => Embeds::messageDelete(discord: $this->discord, webhook: $webhook, message: $this->message, lng: $this->lng, reason: $reason)
+    );
   }
 
   private function addUserTimeout(array $settings, string $module, string $reason, Channel $channel): void
@@ -219,9 +241,10 @@ final class MessageProcessor
 
     if (empty($settings['log_channel'])) return;
 
-    $this->validateWebhook(settings: $settings, callback: function (Webhook $webhook) use ($reason, $warnings, $timeout, $settings) {
-      Embeds::timeoutMember(webhook: $webhook, message: $this->message, lng: $this->lng, reason: $reason, count: $settings[$warnings], timeout: $settings[$timeout]);
-    });
+    $this->validateWebhook(
+      settings: $settings,
+      callback: fn (Webhook $webhook) => Embeds::timeoutMember(discord: $this->discord, webhook: $webhook, message: $this->message, lng: $this->lng, reason: $reason, count: $settings[$warnings], timeout: $settings[$timeout])
+    );
   }
 
   private function isTimeTimeout(int $warnings, bool $status, int $time, string $module): bool
@@ -229,18 +252,17 @@ final class MessageProcessor
     if (!$status) return false;
 
     $user_id = $this->message->author->id;
-    $client = new Client();
     $key = "bot:{$module}:{$user_id}";
 
-    $count = $client->incr($key);
+    $count = await($this->redis->incr($key));
 
     if ($count >= $warnings) {
-      $client->del($key);
+      $this->redis->del($key);
       return true;
     }
 
     if ($count == 1) {
-      $client->expire($key, $time);
+      $this->redis->expire($key, $time);
     }
 
     return false;
@@ -261,27 +283,26 @@ final class MessageProcessor
 
   private function validateWebhook(array $settings, callable $callback): void
   {
-    async(function () use ($settings, $callback) {
-      $webhooks = await($this->discord->rest->webhook->getChannelWebhooks(channelId: $settings['log_channel']));
-      $webhook = getOneWebhook(webhooks: $webhooks);
+    $params = ['log_channel' => $settings['log_channel']];
+    $webhooks = await($this->discord->rest->webhook->getChannelWebhooks(channelId: $settings['log_channel']));
+    // $webhooks = Cache::request(
+    //   redis: $this->redis,
+    //   fn: fn () => $this->discord->rest->webhook->getChannelWebhooks(channelId: $settings['log_channel']),
+    //   params: $params
+    // );
+    $webhook = getOneWebhook(webhooks: $webhooks);
 
-      if (!$webhook) {
-        $avatarContents = file_get_contents(self::AVATAR);
-
-        $data = CreateWebhookBuilder::new()
+    if (!$webhook) {
+      $webhook = await($this->discord->rest->webhook->create(
+        channelId: $settings['log_channel'],
+        builder: CreateWebhookBuilder::new()
           ->setName($this->lng->trans('name'))
-          ->setAvatar($avatarContents, ImageData::PNG);
+          ->setAvatar(file_get_contents(self::AVATAR), ImageData::PNG),
+        reason: $this->lng->trans('audit.webhook.create')
+      ));
+      // Cache::del(redis: $this->redis, params: $params);
+    }
 
-        $newWebhook = await($this->discord->rest->webhook->create(
-          channelId: $settings['log_channel'],
-          builder: $data,
-          reason: $this->lng->trans('audit.webhook.create')
-        ));
-
-        $callback($newWebhook);
-      } else {
-        $callback($webhook);
-      }
-    })();
+    $callback($webhook);
   }
 }

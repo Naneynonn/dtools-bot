@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Naneynonn\Filter;
 
 use React\Promise\PromiseInterface;
@@ -14,12 +16,14 @@ use Naneynonn\Language;
 use Naneynonn\Model;
 use Naneynonn\Config;
 
+use React\Http\Browser;
+use Clue\React\Redis\LazyClient as RedisClient;
+
 use function React\Async\await;
 use function React\Promise\reject;
 use function React\Promise\resolve;
 
-use Predis\Client;
-use React\Http\Browser;
+use function Naneynonn\getIgnoredPermissions;
 
 class BadWords
 {
@@ -33,13 +37,12 @@ class BadWords
 
   private Language $lng;
   private Model $model;
+  private RedisClient $redis;
 
   private array $settings;
   private array $perm;
 
-  private Client $redis;
-
-  public function __construct(Message|MessageCreate|MessageUpdate $message, Language $lng, array $settings, array $perm, Model $model, Channel $channel, ?GuildMember $member)
+  public function __construct(Message|MessageCreate|MessageUpdate $message, Language $lng, array $settings, array $perm, Model $model, Channel $channel, ?GuildMember $member, RedisClient $redis)
   {
     $this->message = $message;
 
@@ -49,6 +52,8 @@ class BadWords
     $this->model = $model;
     $this->channel = $channel;
     $this->member = $member;
+
+    $this->redis = $redis;
   }
 
   // TODO: Вынести как общий метод
@@ -146,7 +151,6 @@ class BadWords
 
     $skip = $this->getSkipWords();
 
-    $this->redis = new Client();
     $this->addMessageInRedis(message: $this->message->content);
 
     $msg_premium = $this->getAllWordsAsString(); // Выведет составленное сообщение из слов
@@ -201,7 +205,7 @@ class BadWords
     }
 
     // Проверка общего количества слов
-    if ($this->redis->llen($listKey) > 10) {
+    if (await($this->redis->llen($listKey)) > 10) {
       $this->redis->del($listKey); // Удаление списка, если слов больше 10
     }
 
@@ -219,7 +223,7 @@ class BadWords
   public function getAllWordsAsString(): string
   {
     $listKey = "messages:{$this->channel->guild_id}:{$this->message->channel_id}";
-    $wordsData = $this->redis->lrange($listKey, 0, -1); // Получение всех элементов из списка
+    $wordsData = await($this->redis->lrange($listKey, 0, -1)); // Получение всех элементов из списка
 
     $words = [];
     foreach ($wordsData as $wordData) {
@@ -239,7 +243,7 @@ class BadWords
   public function getMessageIds(): array
   {
     $listKey = "messages:{$this->channel->guild_id}:{$this->message->channel_id}";
-    $wordsData = $this->redis->lrange($listKey, 0, -1);
+    $wordsData = await($this->redis->lrange($listKey, 0, -1));
 
     $messageIds = [];
     foreach ($wordsData as $wordData) {

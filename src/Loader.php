@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Naneynonn;
 
 use Ragnarok\Fenrir\Discord;
@@ -11,8 +13,14 @@ use Naneynonn\Attr\Command;
 use Naneynonn\Attr\SubCommand;
 
 use Naneynonn\Language;
-use Naneynonn\CacheHelper;
 use Naneynonn\Memory;
+use Naneynonn\Core\App\Buffer;
+
+use Clue\React\Redis\LazyClient as RedisClient;
+use React\EventLoop\Loop;
+use React\EventLoop\LoopInterface;
+
+use function Naneynonn\isObjectEmpty;
 
 use DirectoryIterator;
 use ReflectionClass;
@@ -21,17 +29,22 @@ class Loader
 {
   use Memory;
 
-  private Discord $discord;
-  private Language $lng;
-  private Ready $ready;
-  private CacheHelper $cache;
+  public Discord $discord;
+  public Language $lng;
+  public Ready $ready;
+  public RedisClient $redis;
+  public LoopInterface $loop;
+  public Buffer $buffer;
 
-  public function __construct(Discord $discord, Language $lng, Ready $ready, CacheHelper $cache)
+  public function __construct(Discord $discord, Language $lng, Ready $ready, RedisClient $redis)
   {
     $this->discord = $discord;
     $this->lng = $lng;
     $this->ready = $ready;
-    $this->cache = $cache;
+    $this->redis = $redis;
+
+    $this->loop = Loop::get();
+    $this->buffer = new Buffer($this->loop);
   }
 
   private function setName(string $name): array
@@ -55,7 +68,7 @@ class Loader
       if (!$this->isFile(file: $file)) continue;
 
       $className = $namespace . $file->getBasename('.php');
-      $instance = new $className($this->discord, $this->lng, $this->ready, $this->cache);
+      $instance = new $className($this);
 
       $loadedCount += $registrationCallback($instance, new ReflectionClass($className));
     }
@@ -78,8 +91,9 @@ class Loader
       foreach ($attributes as $attribute) {
         $eventName = $attribute->newInstance()->eventName;
 
-        $instance = new $className($this->discord, $this->lng, $this->ready, $this->cache);
+        $instance = new $className($this);
         $this->discord->gateway->events->on($eventName, function (...$args) use ($instance) {
+          if (empty($args) || isObjectEmpty($args[0])) return;
           $instance->handle(...$args);
         });
 
@@ -108,7 +122,7 @@ class Loader
       $globalCommandAttributes = $reflection->getAttributes(Command::class);
       $globalCommandName = $globalCommandAttributes ? $globalCommandAttributes[0]->newInstance()->name : null;
 
-      $instance = new $className($this->discord, $this->lng, $this->ready, $this->cache);
+      $instance = new $className($this);
 
       $hasSubCommands = false;
 
@@ -131,6 +145,7 @@ class Loader
       // Для классов, представляющих одну глобальную команду без подкоманд
       if ($globalCommandName && !$hasSubCommands) {
         $commandExtension->on($globalCommandName, function (...$args) use ($instance) {
+          if (empty($args) || isObjectEmpty($args[0])) return;
           $instance->handle(...$args); // Предполагается, что метод handle() существует для обработки команды
         });
 
