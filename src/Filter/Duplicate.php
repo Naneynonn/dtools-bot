@@ -14,6 +14,7 @@ use Naneynonn\Language;
 
 use function React\Promise\reject;
 use function React\Promise\resolve;
+use function Naneynonn\getIgnoredPermissions;
 
 class Duplicate
 {
