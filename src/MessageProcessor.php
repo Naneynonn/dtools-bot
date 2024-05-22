@@ -185,7 +185,7 @@ final class MessageProcessor
 
     foreach ($stickers as $sticker) {
       $promises = [
-        (new BadWords(message: $this->message, lng: $this->lng, settings: $settings, perm: $perm, model: $model, channel: $channel, member: $member))->processStickers(sticker: $sticker)
+        (new BadWords(message: $this->message, lng: $this->lng, settings: $settings, perm: $perm, model: $model, channel: $channel, member: $member, redis: $this->redis))->processStickers(sticker: $sticker)
       ];
 
       any($promises)->then(function ($result) use ($settings, $sticker, $channel) {
