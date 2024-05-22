@@ -20,11 +20,8 @@ use React\EventLoop\Loop;
 use Naneynonn\Config;
 use Naneynonn\Language;
 
-// use Monolog\Logger;
-// use Monolog\Handler\StreamHandler;
-
 use Monolog\Logger;
-use Monolog\Handler\StreamHandler;
+use Monolog\Handler\RotatingFileHandler;
 use Monolog\Level;
 
 use DirectoryIterator;
@@ -45,9 +42,7 @@ class Init
 
   private function setDiscord(): Discord
   {
-    // $log = new Logger('Fenrir', [new StreamHandler('php://stdout')]); // Log to stdout (terminal output)
-    $log = (new Logger('Fenrir'))->pushHandler(new StreamHandler("logs/fnrr-{$this->shardId}.log", Level::Info));
-    // $log = (new Logger('Fenrir'))->pushHandler(new StreamHandler("logs/fnrr-{$this->shardId}.log", Level::Debug));
+    $log = (new Logger('Fenrir'))->pushHandler(new RotatingFileHandler("logs/fnrr-{$this->shardId}.log", 2, Level::Info));
 
     $discord = (new Discord(
       token: self::TOKEN,
