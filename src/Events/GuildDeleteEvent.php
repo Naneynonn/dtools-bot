@@ -18,7 +18,7 @@ class GuildDeleteEvent extends EventHelper
 {
   public function handle(GuildDelete $event): void
   {
-    if ($event->unavailable) return;
+    // if ($event->unavailable) return;
 
     $existingIds = array_column($this->ready->guilds, 'id');
     $guildKey = array_search($event->id, $existingIds, true);
