@@ -155,4 +155,55 @@ class Loader
 
     $this->getMemoryUsage(text: "[~] Total loaded commands: {$loadedCount} |");
   }
+
+  // public function loadCommands(): void
+  // {
+  //   $details = $this->setName(name: 'Commands');
+  //   $loadedCount = 0;
+
+  //   $commandExtension = new GlobalCommandExtension();
+  //   $this->discord->registerExtension($commandExtension);
+
+  //   foreach (new DirectoryIterator($details['directory']) as $file) {
+  //     if (!$this->isFile(file: $file)) continue;
+
+  //     $className = $details['namespace'] . $file->getBasename('.php');
+  //     $reflection = new ReflectionClass($className);
+
+  //     // Проверка наличия глобального атрибута команды
+  //     $globalCommandAttributes = $reflection->getAttributes(Command::class);
+  //     $globalCommandName = $globalCommandAttributes ? $globalCommandAttributes[0]->newInstance()->name : null;
+
+  //     $instance = new $className($this);
+
+  //     foreach ($reflection->getMethods() as $method) {
+  //       $subCommandAttributes = $method->getAttributes(SubCommand::class);
+  //       foreach ($subCommandAttributes as $attribute) {
+
+  //         $subCommandData = $attribute->newInstance();
+  //         $eventName = $globalCommandName . '.' . $subCommandData->name;
+  //         $methodName = $method->getName();
+
+  //         $commandExtension->on($eventName, function (...$args) use ($instance, $methodName) {
+  //           if (empty($args) || isObjectEmpty($args[0])) return;
+  //           $instance->$methodName(...$args);
+  //         });
+
+  //         $loadedCount++;
+  //       }
+  //     }
+
+  //     // Для классов, представляющих одну глобальную команду без подкоманд
+  //     if ($globalCommandName) {
+  //       $commandExtension->on($globalCommandName, function (...$args) use ($instance) {
+  //         if (empty($args) || isObjectEmpty($args[0])) return;
+  //         $instance->handle(...$args); // Предполагается, что метод handle() существует для обработки команды
+  //       });
+
+  //       $loadedCount++;
+  //     }
+  //   }
+
+  //   $this->getMemoryUsage(text: "[~] Total loaded commands: {$loadedCount} |");
+  // }
 }

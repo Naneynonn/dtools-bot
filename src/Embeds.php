@@ -22,6 +22,8 @@ use Carbon\Carbon;
 
 use Naneynonn\Language;
 use Naneynonn\Config;
+use Naneynonn\Core\Enums\Color;
+use Naneynonn\Core\Enums\Emoji;
 
 final class Embeds
 {
@@ -67,7 +69,7 @@ final class Embeds
     $color = 13974845;
 
     $author = '<@' . $message->author->id . '>';
-    $v = $lng->trans('embed.violations', ['%count%' => $count, '%text%' => wordEnd(num: $count, name: 'violations', lng: $lng)]);
+    $v = $lng->trans('embed.violations', ['%count%' => $count, '%text%' => $lng->trans('count.violations', ['count' => $count])]);
 
     if ($timeout >= 86400) {
       $days = floor($timeout / 86400);
@@ -145,26 +147,40 @@ final class Embeds
       ->setThumbnail('https://cdn.discordapp.com/attachments/525360788924399637/1099658819023421470/favicon.png');
   }
 
-  public static function noPerm(Language $lng): string
+  public static function response(int|string|Color $color, string $title, ?Emoji $emoji = null): EmbedBuilder
   {
-    return $lng->trans('no-perm', ['%perm%' => 'Administrator, Owner']);
-  }
+    if (is_string($color)) {
+      $color = self::hexToDec($color);
+    } elseif ($color instanceof Color) {
+      $color = $color->value;
+    }
 
-  public static function getLang(Language $lng, string $lang): EmbedBuilder
-  {
-    $color = self::hexToDec('#4f545c');
-
-    return (new EmbedBuilder())
-      ->setDescription($lng->trans('embed.lang.server', ['%lang%' => $lang]))
-      ->setColor($color);
-  }
-
-  public static function response(string $color, string $title): EmbedBuilder
-  {
-    $set_color = self::hexToDec($color);
+    if (!empty($emoji)) {
+      $title = "{$emoji->value} {$title}";
+    }
 
     return (new EmbedBuilder())
       ->setDescription($title)
-      ->setColor($set_color);
+      ->setColor($color);
+  }
+
+  public static function danger(string $text): EmbedBuilder
+  {
+    return self::response(color: Color::DANGER, emoji: Emoji::ERROR, title: $text);
+  }
+
+  public static function success(string $text): EmbedBuilder
+  {
+    return self::response(color: Color::SUCCESS, emoji: Emoji::ENABLE, title: $text);
+  }
+
+  public static function info(string $text, Emoji $emoji = Emoji::INFO): EmbedBuilder
+  {
+    return self::response(color: Color::INFO, emoji: $emoji, title: $text);
+  }
+
+  public static function noPerm(Language $lng): EmbedBuilder
+  {
+    return self::danger(text: $lng->trans('no-perm', ['%perm%' => 'Administrator, Owner']));
   }
 }
