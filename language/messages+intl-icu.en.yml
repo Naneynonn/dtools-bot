@@ -1,0 +1,36 @@
+count:
+  servers: >-
+    {count, plural, 
+      one {Server} 
+      other {Servers}
+    }
+  members: >-
+    {count, plural, 
+      one {Total Member} 
+      other {Total Members}
+    }
+  gifts: >-
+    {count, plural, 
+      one {Gift} 
+      other {Gifts}
+    }
+  days: >-
+    {count, plural, 
+      one {Day} 
+      other {Days}
+    }
+  hours: >-
+    {count, plural, 
+      one {Hour} 
+      other {Hours}
+    }
+  violations: >-
+    {count, plural, 
+      one {violation} 
+      other {violations}
+    }
+  messages: >-
+    {count, plural, 
+      one {message} 
+      other {messages}
+    }

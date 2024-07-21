@@ -1,0 +1,43 @@
+count:
+  servers: >-
+    {count, plural,
+      one {Сервер} 
+      few {Сервера} 
+      other {Серверів}
+    }
+  members: >-
+    {count, plural,
+      one {Учасник}
+      few {Учасника}
+      other {Учасників}
+    }
+  gifts: >-
+    {count, plural,
+      one {Подарунок} 
+      few {Подарунка} 
+      other {Подарунків}
+    }
+  days: >-
+    {count, plural,
+      one {День} 
+      few {Дні} 
+      other {Днів}
+    }
+  hours: >-
+    {count, plural,
+      one {Година} 
+      few {Години} 
+      other {Годин}
+    }
+  violations: >-
+    {count, plural, 
+      one   {порушення} 
+      few   {порушення} 
+      other {порушень}
+    }
+  messages: >-
+    {count, plural, 
+      one   {повідомлення} 
+      few   {повідомлення} 
+      other {повідомлень}
+    }

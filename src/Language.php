@@ -1,15 +1,18 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Naneynonn;
 
 use Symfony\Component\Translation\Loader\YamlFileLoader;
 use Symfony\Component\Translation\Translator;
 
+use Naneynonn\Memory;
+
 use DirectoryIterator;
 
 class Language
 {
-
   private Translator $translator;
 
   public function __construct(string $defaultLocale = 'en')
@@ -25,13 +28,22 @@ class Language
     $this->translator->addLoader('yaml', $loader);
 
     foreach (new DirectoryIterator($directory) as $file) {
-      if (!$file->isDot() && $file->isFile() && $file->getExtension() === 'yml') {
-        $locale = str_replace(['messages.', '.yml'], '', $file->getFilename());
+      if ($file->isDot() || !$file->isFile() || $file->getExtension() !== 'yml') {
+        continue;
+      }
+
+      $filename = $file->getFilename();
+
+      if (preg_match('/^messages\.(.+)\.yml$/', $filename, $matches)) {
+        $locale = $matches[1];
         $this->translator->addResource('yaml', $file->getPathname(), $locale);
+      } elseif (preg_match('/^messages\+intl-icu\.(.+)\.yml$/', $filename, $matches)) {
+        $locale = $matches[1];
+        $this->translator->addResource('yaml', $file->getPathname(), $locale, 'messages+intl-icu');
       }
     }
 
-    // Установка английского языка в качестве запасного
+    // Установка резервного языка
     $this->translator->setFallbackLocales(['en']);
   }
 

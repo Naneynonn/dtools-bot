@@ -1,0 +1,43 @@
+count:
+  servers: >-
+    {count, plural,
+        one   {Сервер}
+        few   {Сервера}
+        other {Серверов}
+    }
+  members: >-
+    {count, plural, 
+        one   {Участник} 
+        few   {Участника} 
+        other {Участников}
+    }
+  gifts: >-
+    {count, plural, 
+      one   {Подарок} 
+      few   {Подарка} 
+      other {Подарков}
+    }
+  days: >-
+    {count, plural, 
+      one   {День} 
+      few   {Дня} 
+      other {Дней}
+    }
+  hours: >-
+    {count, plural, 
+      one   {Час} 
+      few   {Часа} 
+      other {Часов}
+    }
+  violations: >-
+    {count, plural, 
+      one   {нарушение} 
+      few   {нарушения} 
+      other {нарушений}
+    }
+  messages: >-
+    {count, plural, 
+      one   {сообщение} 
+      few   {сообщения} 
+      other {сообщений}
+    }

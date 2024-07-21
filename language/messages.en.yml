@@ -75,7 +75,7 @@ embed:
   info: Information
   filters: Filters
   automod:
-    log: <:success:1099711698979528814> The log channel has been successfully updated.
+    log: The log channel has been successfully updated.
     filter:
       enable: <:enable:1099727536952447007> Module successfully enabled.
       disable: <:disable:1099727548629401651> Module successfully disabled.
@@ -87,14 +87,15 @@ embed:
     err: This language does not exist.
     set: You have successfully set a new language
   sticker-name: "Sticker: %sticker%"
+  empty:
+    field: Field cannot be empty
+  purge:
+    old: There are no messages and/or they are older than 14 days
+    del: Successfully deleted %count% %msg%
 
 audit:
   timeout: Auto-moderation filter triggers
   webhook:
     create: A webhook for logs has been created
-
-count:
-  violations:
-    1: violation
-    2: violations
-    5: violations
+  message:
+    bulk: Bulk message deletion
