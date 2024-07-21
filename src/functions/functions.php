@@ -6,15 +6,13 @@ namespace Naneynonn;
 
 use Ragnarok\Fenrir\Gateway\Events\MessageCreate;
 use Ragnarok\Fenrir\Gateway\Events\MessageUpdate;
+
 use Ragnarok\Fenrir\Parts\Message;
-
 use Ragnarok\Fenrir\Parts\GuildMember;
-
 use Ragnarok\Fenrir\Parts\Webhook;
 
 use Ragnarok\Fenrir\Enums\Permission;
 
-use Naneynonn\Language;
 
 function getIgnoredPermissions(?array $perm, MessageUpdate|MessageCreate $message, string $selection, ?GuildMember $member = null, ?string $parent_id = null): bool
 {
@@ -114,44 +112,6 @@ function outputString(array $settings, string $module, Message|MessageCreate|Mes
   }
 
   return str_replace('%name%', $user_id, $reason);
-}
-
-/**
- * @deprecated
- */
-function getNormalEnd(int $num, string $for_1, string $for_2, string $for_5): string
-{
-  $num = abs($num) % 100; // берем число по модулю и сбрасываем сотни (делим на 100, а остаток присваиваем переменной $num)
-  $num_x = $num % 10; // сбрасываем десятки и записываем в новую переменную
-
-  if ($num > 10 && $num < 20) return $for_5; // если число принадлежит отрезку [11;19]
-  if ($num_x > 1 && $num_x < 5) return $for_2; // иначе если число оканчивается на 2,3,4
-  if ($num_x == 1) return $for_1; // иначе если оканчивается на 1
-
-  return $for_5;
-}
-
-/**
- * @deprecated
- */
-function wordEnd(int $num, string $name, Language $lng): string
-{
-  $num = abs($num) % 100; // берем число по модулю и сбрасываем сотни (делим на 100, а остаток присваиваем переменной $num)
-  $num_x = $num % 10; // сбрасываем десятки и записываем в новую переменную
-
-  if ($num > 10 && $num < 20) return $lng->trans("count.{$name}.5"); // если число принадлежит отрезку [11;19] 
-  if ($num_x > 1 && $num_x < 5) return $lng->trans("count.{$name}.2"); // иначе если число оканчивается на 2,3,4
-  if ($num_x == 1) return $lng->trans("count.{$name}.1"); // иначе если оканчивается на 1
-
-  return $lng->trans("count.{$name}.5");
-}
-
-/**
- * @deprecated
- */
-function is_object_empty(object $object): bool
-{
-  return empty((array) $object);
 }
 
 function hasPermission(int $bitmask, Permission $permission): bool

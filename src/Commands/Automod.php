@@ -207,35 +207,16 @@ class Automod extends CommandHelper
     $interaction = $command->interaction;
     $this->setLocale(locale: $interaction->locale);
 
-    $callback = InteractionCallbackBuilder::new()
-      ->setFlags(MessageFlag::EPHEMERAL->value)
-      ->setType(InteractionCallbackType::CHANNEL_MESSAGE_WITH_SOURCE);
-
-    // Если команду используют в ЛС
-    if (is_null($interaction->guild_id ?? null)) {
-      $callback->setContent(content: Embeds::noPerm(lng: $this->lng));
-    } else {
-      if (hasPermission(bitmask: (int) $interaction->member->permissions, permission: Permission::ADMINISTRATOR)) {
-        $this->handleAdminCommand(command: $command, interaction: $interaction, callback: $callback);
-      } else {
-        $callback->setContent(content: Embeds::noPerm(lng: $this->lng));
-      }
+    if (is_null($interaction->guild_id ?? null) || !$this->isServerAdmin(interaction: $interaction)) {
+      $this->sendMessage(command: $command, embed: Embeds::noPerm(lng: $this->lng));
+      return;
     }
 
-    $command->createInteractionResponse($callback);
-
+    $this->handleAdminCommand(command: $command, interaction: $interaction);
     $this->getMemoryUsage(text: '[~] Command /automod |');
   }
 
-  private function setLocale(?string $locale): void
-  {
-    if (empty($locale)) return;
-
-    $shortLocale = substr($locale, 0, 2);
-    $this->lng->setLocale($shortLocale);
-  }
-
-  private function handleAdminCommand(CommandInteraction $command, mixed $interaction, InteractionCallbackBuilder $callback): void
+  private function handleAdminCommand(CommandInteraction $command, mixed $interaction): void
   {
     $model = new Model();
 
@@ -252,8 +233,7 @@ class Automod extends CommandHelper
       }
 
       $model->automodToggle(server_id: $interaction->guild_id, is_enable: $value);
-      $embed = Embeds::response(color: $color, title: $title);
-      $callback->addEmbed(embed: $embed);
+      $this->sendMessage(command: $command, embed: Embeds::response(color: $color, title: $title));
     }
 
     // TODO: NOT WORK
@@ -262,34 +242,33 @@ class Automod extends CommandHelper
       if (is_null($value)) return;
 
       $model->updateAutomodLogChannel(server_id: $interaction->guild_id, log_channel: $value);
-      $embed = Embeds::response(color: $this->lng->trans('color.success'), title: $this->lng->trans('embed.automod.log'));
-      $callback->addEmbed(embed: $embed);
+      $this->sendMessage(command: $command, embed: Embeds::success(text: $this->lng->trans('embed.automod.log')));
     }
 
     if ($command->hasOption('badwords')) {
-      $this->toggleCommand(command: $command, interaction: $interaction, callback: $callback, model: $model, type: 'badwords');
+      $this->toggleCommand(command: $command, interaction: $interaction, model: $model, type: 'badwords');
     }
 
     if ($command->hasOption('caps')) {
-      $this->toggleCommand(command: $command, interaction: $interaction, callback: $callback, model: $model, type: 'caps');
+      $this->toggleCommand(command: $command, interaction: $interaction, model: $model, type: 'caps');
     }
 
     if ($command->hasOption('replace')) {
-      $this->toggleCommand(command: $command, interaction: $interaction, callback: $callback, model: $model, type: 'replace');
+      $this->toggleCommand(command: $command, interaction: $interaction, model: $model, type: 'replace');
     }
 
     if ($command->hasOption('zalgo')) {
-      $this->toggleCommand(command: $command, interaction: $interaction, callback: $callback, model: $model, type: 'zalgo');
+      $this->toggleCommand(command: $command, interaction: $interaction, model: $model, type: 'zalgo');
     }
 
     if ($command->hasOption('duplicate')) {
-      $this->toggleCommand(command: $command, interaction: $interaction, callback: $callback, model: $model, type: 'duplicate');
+      $this->toggleCommand(command: $command, interaction: $interaction, model: $model, type: 'duplicate');
     }
 
     $model->close();
   }
 
-  private function toggleCommand(CommandInteraction $command, mixed $interaction, InteractionCallbackBuilder $callback, Model $model, string $type): void
+  private function toggleCommand(CommandInteraction $command, mixed $interaction, Model $model, string $type): void
   {
     $value = $command->getOption($type)?->options[0]?->value;
     if (is_null($value)) return;
@@ -303,7 +282,6 @@ class Automod extends CommandHelper
     }
 
     $model->automodToggleCommands(server_id: $interaction->guild_id, is_enable: $value, type: $type);
-    $embed = Embeds::response(color: $color, title: $title);
-    $callback->addEmbed(embed: $embed);
+    $this->sendMessage(command: $command, embed: Embeds::response(color: $color, title: $title));
   }
 }
