@@ -5,11 +5,6 @@ declare(strict_types=1);
 namespace Naneynonn\Commands;
 
 use Ragnarok\Fenrir\Interaction\CommandInteraction;
-use Ragnarok\Fenrir\Interaction\Helpers\InteractionCallbackBuilder;
-
-use Ragnarok\Fenrir\Enums\InteractionCallbackType;
-use Ragnarok\Fenrir\Enums\MessageFlag;
-use Ragnarok\Fenrir\Enums\Permission;
 
 use Naneynonn\Embeds;
 use Naneynonn\Model;
@@ -17,149 +12,9 @@ use Naneynonn\Attr\Command;
 use Naneynonn\Attr\SubCommand;
 use Naneynonn\Core\App\CommandHelper;
 
-use function Naneynonn\hasPermission;
-
 #[Command(name: 'automod')]
 class Automod extends CommandHelper
 {
-  // public function register(): CommandBuilder
-  // {
-  //   return CommandBuilder::new()
-  //     ->setName('automod')
-  //     ->setDescription('Automoderation module')
-  //     ->setDescriptionLocalizations([
-  //       'ru' => 'Модуль автомодерации',
-  //       'uk' => 'Модуль автомодерації'
-  //     ])
-  //     ->addOption(
-  //       CommandOptionBuilder::new()
-  //         ->setName('filter')
-  //         ->setDescription('Settings module')
-  //         ->setDescriptionLocalizations([
-  //           'ru' => 'Настройка модуля',
-  //           'uk' => 'Налаштування модуля'
-  //         ])
-  //         ->setType(ApplicationCommandOptionType::SUB_COMMAND)
-  //         ->addOption(
-  //           CommandOptionBuilder::new()
-  //             ->setName('enable')
-  //             ->setDescription('Enable/disable auto-moderation module')
-  //             ->setDescriptionLocalizations([
-  //               'ru' => 'Включить/выключить модуль авто-модерации',
-  //               'uk' => 'Включити/вимкнути модуль авто-модерації'
-  //             ])
-  //             ->setType(ApplicationCommandOptionType::BOOLEAN)
-  //             ->setRequired(true)
-  //         )
-  //     )
-  //     ->addOption(
-  //       CommandOptionBuilder::new()
-  //         ->setName('log')
-  //         ->setDescription('Automoderation module')
-  //         ->setDescriptionLocalizations([
-  //           'ru' => 'Модуль автомодерации',
-  //           'uk' => 'Модуль автомодерації'
-  //         ])
-  //         ->setType(ApplicationCommandOptionType::SUB_COMMAND)
-  //         ->addOption(
-  //           CommandOptionBuilder::new()
-  //             ->setName('channel')
-  //             ->setDescription('Specify the channel ID to which the logs will be sent')
-  //             ->setDescriptionLocalizations([
-  //               'ru' => 'Укажите ID канала в который будут отправлять логи',
-  //               'uk' => 'Вкажіть ID каналу в який будуть відправляти логи'
-  //             ])
-  //             ->setType(ApplicationCommandOptionType::CHANNEL)
-  //             ->setRequired(true)
-  //         )
-  //     )
-  //     ->addOption(
-  //       CommandOptionBuilder::new()
-  //         ->setName('badwords')
-  //         ->setDescription('Bad Word Filter')
-  //         ->setDescriptionLocalizations([
-  //           'ru' => 'Фильтр плохих слов',
-  //           'uk' => 'Фільтр поганих слів'
-  //         ])
-  //         ->setType(ApplicationCommandOptionType::SUB_COMMAND)
-  //         ->addOption(
-  //           CommandOptionBuilder::new()
-  //             ->setName('enable')
-  //             ->setDescription('Enable/disable caps filter')
-  //             ->setDescriptionLocalizations([
-  //               'ru' => 'Включить/выключить фильтр капса',
-  //               'uk' => 'Увімкнути/вимкнути фільтр капсу'
-  //             ])
-  //             ->setType(ApplicationCommandOptionType::BOOLEAN)
-  //             ->setRequired(true)
-  //         )
-  //     )
-  //     ->addOption(
-  //       CommandOptionBuilder::new()
-  //         ->setName('replace')
-  //         ->setDescription('Similar characters filter')
-  //         ->setDescriptionLocalizations([
-  //           'ru' => 'Фильтр похожих символов',
-  //           'uk' => 'Фільтр схожих символів'
-  //         ])
-  //         ->setType(ApplicationCommandOptionType::SUB_COMMAND)
-  //         ->addOption(
-  //           CommandOptionBuilder::new()
-  //             ->setName('enable')
-  //             ->setDescription('Enable/disable replace filter')
-  //             ->setDescriptionLocalizations([
-  //               'ru' => 'Включить/выключить фильтр похожих символов',
-  //               'uk' => 'Увімкнути/вимкнути фільтр схожих символів'
-  //             ])
-  //             ->setType(ApplicationCommandOptionType::BOOLEAN)
-  //             ->setRequired(true)
-  //         )
-  //     )
-  //     ->addOption(
-  //       CommandOptionBuilder::new()
-  //         ->setName('zalgo')
-  //         ->setDescription('Zalgo Filter')
-  //         ->setDescriptionLocalizations([
-  //           'ru' => 'Фильтр Залго (нечитаемые символы)',
-  //           'uk' => 'Фільтр Залго (нечитабельні символи)'
-  //         ])
-  //         ->setType(ApplicationCommandOptionType::SUB_COMMAND)
-  //         ->addOption(
-  //           CommandOptionBuilder::new()
-  //             ->setName('enable')
-  //             ->setDescription('Enable/disable zalgo filter')
-  //             ->setDescriptionLocalizations([
-  //               'ru' => 'Включить/выключить фильтр залго (нечитаемые символы)',
-  //               'uk' => 'Увімкнути/вимкнути фільтр залго (нечитабельні символи)'
-  //             ])
-  //             ->setType(ApplicationCommandOptionType::BOOLEAN)
-  //             ->setRequired(true)
-  //         )
-  //     )
-  //     ->addOption(
-  //       CommandOptionBuilder::new()
-  //         ->setName('duplicate')
-  //         ->setDescription('Duplicate Filter')
-  //         ->setDescriptionLocalizations([
-  //           'ru' => 'Фильтр одинаковых слов/символов',
-  //           'uk' => 'Фільтр однакових слів/символів'
-  //         ])
-  //         ->setType(ApplicationCommandOptionType::SUB_COMMAND)
-  //         ->addOption(
-  //           CommandOptionBuilder::new()
-  //             ->setName('enable')
-  //             ->setDescription('Enable/disable duplicate filter')
-  //             ->setDescriptionLocalizations([
-  //               'ru' => 'Включить/выключить фильтр одинаковых слов/символов',
-  //               'uk' => 'Увімкнути/вимкнути фільтр однакових слів/символів'
-  //             ])
-  //             ->setType(ApplicationCommandOptionType::BOOLEAN)
-  //             ->setRequired(true)
-  //         )
-  //     )
-  //     ->setType(ApplicationCommandTypes::CHAT_INPUT);
-  // }
-
   #[SubCommand(name: 'filter')]
   public function filter(CommandInteraction $command): void
   {

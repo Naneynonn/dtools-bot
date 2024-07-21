@@ -12,7 +12,7 @@ color:
   grey: "#4f545c"
 
 commands:
-  main: </lang:1100393171436961843>
+  main: </lang:1100393171436961843>, </purge any:1264695134273142848>, </purge user:1264695134273142848>, </purge bots:1264695134273142848>
   automod: </automod filter:1099675008923598908>, </automod log:1099675008923598908>
   filters: </automod badwords:1099675008923598908>, </automod replace:1099675008923598908>, </automod caps:1099675008923598908>, </automod zalgo:1099675008923598908>, </automod duplicate:1099675008923598908>
 
