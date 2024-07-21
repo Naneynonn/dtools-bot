@@ -31,6 +31,8 @@ $redis = $factory->createLazyClient('localhost:6379');
 $interactionHandler = new InteractionHandler();
 $discord->registerExtension($interactionHandler);
 
+// require_once 'setup.php';
+
 $discord->gateway->events->once(Events::READY, function (Ready $event) use ($discord, $init, $lng, $redis) {
   $init->setPresence(discord: $discord);
 
