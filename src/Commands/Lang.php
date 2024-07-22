@@ -95,7 +95,7 @@ class Lang extends CommandHelper
     $interaction = $command->interaction;
     $this->setLocale(locale: $interaction->locale);
 
-    if (is_null($interaction->guild_id ?? null)) {
+    if (is_null($interaction->guild_id ?? null) || !$this->isServerAdmin(interaction: $interaction)) {
       $this->sendMessage(command: $command, embed: Embeds::noPerm(lng: $this->lng));
       return;
     }
