@@ -41,6 +41,7 @@ use function React\Async\async;
 use function Naneynonn\getIgnoredPermissions;
 
 use Exception;
+use Ragnarok\Fenrir\Enums\EmbedType;
 use Throwable;
 
 final class MessageProcessor
@@ -64,7 +65,7 @@ final class MessageProcessor
 
   private function isEmpty(): bool
   {
-    return ($this->message->author->bot ?? false) || empty($this->message) || (empty($this->message->content) && empty($this->message->sticker_items));
+    return ($this->message->author->bot ?? false) || empty($this->message) || (empty($this->message->content) && empty($this->message->sticker_items) && empty($this->message->attachments) && !empty($this->message->embeds));
   }
 
   private function getChannel(): Channel
@@ -128,6 +129,10 @@ final class MessageProcessor
 
     if (!empty($this->message->sticker_items)) {
       $this->processStickers(model: $model, channel: $channel, settings: $settings, perm: $perm, member: $member);
+    }
+
+    if (!empty($this->message->attachments) || !empty($this->message->embeds)) {
+      $this->processImages(model: $model, channel: $channel, settings: $settings, perm: $perm, member: $member);
     }
   }
 
@@ -215,6 +220,58 @@ final class MessageProcessor
         echo 'Error sticker any: ' . $e->getMessage() . PHP_EOL;
       });
     }
+  }
+
+  private function processImages(Model $model, Channel $channel, array $settings, array $perm, ?GuildMember $member = null): void
+  {
+    $embeds = $this->message->embeds;
+    $attachments = $this->message->attachments;
+
+    foreach ($embeds as $embed) {
+      if ($embed->type === EmbedType::IMAGE || $embed->type === EmbedType::GIFV) {
+        $this->processImage($embed->url, $model, $channel, $settings, $perm, $member);
+      }
+    }
+
+    foreach ($attachments as $attachment) {
+      if (strpos($attachment->content_type, 'image/') === 0) {
+        $this->processImage($attachment->url, $model, $channel, $settings, $perm, $member);
+      }
+    }
+  }
+
+  private function processImage(string $url, Model $model, Channel $channel, array $settings, array $perm, ?GuildMember $member = null): void
+  {
+    $promises = [
+      (new BadWords(message: $this->message, lng: $this->lng, settings: $settings, perm: $perm, model: $model, channel: $channel, member: $member, redis: $this->redis))->processImage(url: $url)
+    ];
+
+    any($promises)->then(function ($result) use ($settings, $channel) {
+      $module = $result['module'];
+      $reason = $result['reason']['log'];
+      $reason_timeout = $result['reason']['timeout'];
+      $reason_del = isset($result['reason']['delete']) ? $result['reason']['delete'] : $this->lng->trans('delete.' . $module);
+      $this->message->content = $result['reason']['text'];
+
+      $this->discord->rest->channel->deleteMessage(channelId: $this->message->channel_id, messageId: $this->message->id);
+
+      $text_string = outputString(settings: $settings, module: $module, message: $this->message, reason: $reason_del);
+      $getDelText = MessageBuilder::new()->setContent($text_string);
+      $this->discord->rest->channel->createMessage($this->message->channel_id, $getDelText)->then(function (Message $message) use ($settings, $module) {
+        $this->loop->addTimer(
+          $settings[$module . '_delete_after_seconds'],
+          fn () => $this->discord->rest->channel->deleteMessage($message->channel_id, $message->id)
+        );
+      })->otherwise(function (Exception $e) {
+        echo 'Error image createMessage: ' . $e->getMessage() . PHP_EOL;
+      });
+
+      $this->logToChannel(settings: $settings, reason: $reason);
+      $this->addUserTimeout(settings: $settings, module: $module, reason: $reason_timeout, channel: $channel);
+      $this->getMemoryUsage(text: '[-] Del Image');
+    })->otherwise(function (Exception $e) {
+      echo 'Error image any: ' . $e->getMessage() . PHP_EOL;
+    });
   }
 
   private function logToChannel(array $settings, string $reason): void

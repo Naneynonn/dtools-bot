@@ -16,8 +16,12 @@ use Naneynonn\Language;
 use Naneynonn\Model;
 use Naneynonn\Config;
 
+use React\Filesystem\Factory;
+use React\Filesystem\AdapterInterface;
 use React\Http\Browser;
+
 use Clue\React\Redis\LazyClient as RedisClient;
+use thiagoalessio\TesseractOCR\TesseractOCR;
 
 use function React\Async\await;
 use function React\Promise\reject;
@@ -193,6 +197,77 @@ class BadWords
     }
 
     return resolve($result);
+  }
+
+  public function processImage(string $url): PromiseInterface
+  {
+    if ($this->isModuleDisabled()) return $this->sendReject(text: 'Disabled');
+    if (!$this->isPremium()) return $this->sendReject(text: 'No Premium');
+
+    $skip = $this->getSkipWords();
+
+    $text = $this->extractTextFromImage(url: $url);
+    if (empty($text)) return $this->sendReject(text: 'No image text');
+
+    $badword_check = $this->fetchBadWords(message: $text, skip: $skip, skipTypes: $this->settings['badwords_exclusion_flags']);
+    if (!isset($badword_check['badwords'])) return $this->sendReject(text: 'Err API');
+    if (!$badword_check['badwords']) return $this->sendReject(text: 'No Badwords');
+
+    $reason = $this->lng->trans('embed.reason.foul-lang');
+    $reason_del = $this->lng->trans('delete.badwords.foul');
+    if (!is_null($badword_check['bad_type'])) {
+      $reason_list = $this->decodeConditions(bitfield: $badword_check['bad_type']);
+      $reason = $reason_list['list'];
+      $reason_del = $reason_list['message'];
+    }
+
+    if ($this->isIgnoredPerm()) return $this->sendReject(text: 'Ignored Perm');
+
+    return resolve([
+      'module' => self::TYPE,
+      'reason' => [
+        'log' => $reason,
+        'timeout' => $reason,
+        'delete' => $reason_del,
+        'text' => $badword_check['message']
+      ]
+    ]);
+  }
+
+  private function downloadImage(string $url, AdapterInterface $filesystem): string
+  {
+    $path = tempnam(sys_get_temp_dir(), 'img_') . '.png';
+    $client = new Browser();
+
+    try {
+      $response = await($client->get(url: $url));
+      $filesystem->file($path)->putContents((string) $response->getBody());
+      return $path;
+    } catch (\Exception $e) {
+      echo 'Err fetch bw: ' .  $e->getMessage(), PHP_EOL;
+      return null;
+    }
+
+    return json_decode((string) $response->getBody(), true);
+  }
+
+  private function recognizeText(string $path): string
+  {
+    return (new TesseractOCR($path))->lang('rus', 'urk', 'eng')->run();
+  }
+
+  private function extractTextFromImage(string $url): string
+  {
+    $filesystem = Factory::create();
+
+    $url = $this->downloadImage(url: $url, filesystem: $filesystem);
+    $text = $this->recognizeText(path: $url);
+
+    if (file_exists($url)) {
+      unlink($url);
+    }
+
+    return $text;
   }
 
   // Добавляет одно слово в Redis с уникальным ключом, включающим messageId
