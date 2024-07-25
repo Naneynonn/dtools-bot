@@ -168,12 +168,12 @@ class Purge extends CommandHelper
     })();
   }
 
-  private function collectIds(array $messages, ?Closure $condition = null): array
+  private function collectIds(?array $messages, ?Closure $condition = null): array
   {
     $ids = [];
     $twoWeeksAgo = Carbon::now()->subDays(14);
 
-    foreach ($messages as $message) {
+    foreach ($messages ?? [] as $message) {
       if ($message->timestamp->lessThanOrEqualTo($twoWeeksAgo)) continue;
       if (!is_null($condition) && !$condition($message)) continue;
 
