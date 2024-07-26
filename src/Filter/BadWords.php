@@ -23,6 +23,8 @@ use React\Http\Browser;
 use Clue\React\Redis\LazyClient as RedisClient;
 use thiagoalessio\TesseractOCR\TesseractOCR;
 
+use Imagick;
+
 use function React\Async\await;
 use function React\Promise\reject;
 use function React\Promise\resolve;
@@ -256,15 +258,62 @@ class BadWords
     return (new TesseractOCR($path))->lang('rus', 'urk', 'eng')->run();
   }
 
+  private function preprocessImage(string $path): string
+  {
+    $image = new Imagick($path);
+
+    // Преобразование изображения в оттенки серого
+    $image->setImageColorspace(Imagick::COLORSPACE_GRAY);
+
+    // Увеличение резкости
+    $image->sharpenImage(2, 1);
+
+    // Удаление крапинок и мелких артефактов
+    $image->despeckleImage();
+
+    // Применение медианного фильтра для уменьшения шума
+    $image->statisticImage(Imagick::STATISTIC_MEDIAN, 3, 3);
+
+    // Применение адаптивного размытия
+    $image->adaptiveBlurImage(1, 1);
+
+    // Дополнительный этап размытия для сглаживания оставшихся шумов
+    $image->gaussianBlurImage(0.5, 0.5);
+
+    // Дополнительное увеличение контраста для улучшения четкости текста
+    $image->contrastImage(true);
+
+    // Сохранение обработанного изображения во временный файл
+    $processedPath = tempnam(sys_get_temp_dir(), 'processed_') . '.png';
+    $image->writeImage($processedPath);
+
+    // Дополнительное сохранение обработанного изображения для отладки
+    // $debugPath = 'processed_' . uniqid() . '.png';
+    // $image->writeImage($debugPath);
+
+    $image->destroy();
+
+    return $processedPath;
+  }
+
   private function extractTextFromImage(string $url): string
   {
     $filesystem = Factory::create();
 
-    $url = $this->downloadImage(url: $url, filesystem: $filesystem);
-    $text = $this->recognizeText(path: $url);
+    $imagePath = $this->downloadImage($url, $filesystem);
+    if ($imagePath === null) {
+      return '';
+    }
 
-    if (file_exists($url)) {
-      unlink($url);
+    $processedImagePath = $this->preprocessImage($imagePath);
+    $text = $this->recognizeText($processedImagePath);
+    // print_r($text);
+
+    if (file_exists($imagePath)) {
+      unlink($imagePath);
+    }
+    if (file_exists($processedImagePath)) {
+      unlink($processedImagePath);
     }
 
     return $text;
