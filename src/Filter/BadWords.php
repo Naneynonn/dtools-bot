@@ -255,11 +255,21 @@ class BadWords
 
   private function recognizeText(string $path): string
   {
-    try {
-      return (new TesseractOCR($path))->lang('rus', 'ukr', 'eng')->run();
-    } catch (\Throwable $th) {
-      return '';
+    $psms = [3, 6, 4, 7]; // Начальный и резервные режимы PSM
+
+    foreach ($psms as $psm) {
+      try {
+        $text = (new TesseractOCR($path))->lang('rus+ukr+eng')->psm($psm)->run();
+        if (!empty($text)) {
+          return $text;
+        }
+      } catch (\Throwable $th) {
+        // echo 'Err recognize text with PSM ' . $psm . ': ' . $th->getMessage(), PHP_EOL;
+      }
     }
+
+    // echo 'Err: Tesseract did not produce any output with any PSM.' . PHP_EOL;
+    return '';
   }
 
   private function preprocessImage(string $path): string

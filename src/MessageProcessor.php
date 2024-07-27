@@ -228,8 +228,12 @@ final class MessageProcessor
     $attachments = $this->message->attachments;
 
     foreach ($embeds as $embed) {
-      if ($embed->type === EmbedType::IMAGE || $embed->type === EmbedType::GIFV) {
+      if ($embed->type === EmbedType::IMAGE) {
         $this->processImage($embed->url, $model, $channel, $settings, $perm, $member);
+      }
+
+      if ($embed->type === EmbedType::GIFV) {
+        $this->processImage($embed->thumbnail->url, $model, $channel, $settings, $perm, $member);
       }
     }
 
