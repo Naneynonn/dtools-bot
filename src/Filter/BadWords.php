@@ -255,7 +255,11 @@ class BadWords
 
   private function recognizeText(string $path): string
   {
-    return (new TesseractOCR($path))->lang('rus', 'urk', 'eng')->run();
+    try {
+      return (new TesseractOCR($path))->lang('rus', 'ukr', 'eng')->run();
+    } catch (\Throwable $th) {
+      return '';
+    }
   }
 
   private function preprocessImage(string $path): string
@@ -269,26 +273,26 @@ class BadWords
     $image->sharpenImage(2, 1);
 
     // Удаление крапинок и мелких артефактов
-    $image->despeckleImage();
+    // $image->despeckleImage();
 
     // Применение медианного фильтра для уменьшения шума
-    $image->statisticImage(Imagick::STATISTIC_MEDIAN, 3, 3);
+    // $image->statisticImage(Imagick::STATISTIC_MEDIAN, 3, 3);
 
     // Применение адаптивного размытия
-    $image->adaptiveBlurImage(1, 1);
+    // $image->adaptiveBlurImage(1, 1);
 
-    // Дополнительный этап размытия для сглаживания оставшихся шумов
-    $image->gaussianBlurImage(0.5, 0.5);
+    // // Дополнительный этап размытия для сглаживания оставшихся шумов
+    // $image->gaussianBlurImage(0.5, 0.5);
 
-    // Дополнительное увеличение контраста для улучшения четкости текста
-    $image->contrastImage(true);
+    // // Дополнительное увеличение контраста для улучшения четкости текста
+    // $image->contrastImage(true);
 
     // Сохранение обработанного изображения во временный файл
     $processedPath = tempnam(sys_get_temp_dir(), 'processed_') . '.png';
     $image->writeImage($processedPath);
 
     // Дополнительное сохранение обработанного изображения для отладки
-    // $debugPath = 'processed_' . uniqid() . '.png';
+    // $debugPath = '/root/bots/discordtools-dev/processed_' . uniqid() . '.png';
     // $image->writeImage($debugPath);
 
     $image->destroy();
