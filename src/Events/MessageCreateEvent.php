@@ -8,15 +8,14 @@ use Ragnarok\Fenrir\Gateway\Events\MessageCreate;
 use Ragnarok\Fenrir\Constants\Events;
 
 use Naneynonn\Attr\EventHandlerFor;
-use Naneynonn\MessageProcessor;
 use Naneynonn\Core\App\EventHelper;
+use Naneynonn\Automod\ModerationHandler;
 
 #[EventHandlerFor(Events::MESSAGE_CREATE)]
 class MessageCreateEvent extends EventHelper
 {
   public function handle(MessageCreate $message): void
   {
-    $processor = new MessageProcessor(message: $message, lng: $this->lng, discord: $this->discord, redis: $this->redis, loop: $this->loop);
-    $processor->process();
+    (new ModerationHandler(message: $message, discord: $this->discord, lng: $this->lng, redis: $this->redis, loop: $this->loop))->handle();
   }
 }

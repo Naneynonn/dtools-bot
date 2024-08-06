@@ -1,22 +1,24 @@
 <?php
 
-namespace Naneynonn\Filter;
+declare(strict_types=1);
 
-use React\Promise\PromiseInterface;
+namespace Naneynonn\Automod\Filter;
 
 use Ragnarok\Fenrir\Gateway\Events\MessageCreate;
 use Ragnarok\Fenrir\Gateway\Events\MessageUpdate;
+
 use Ragnarok\Fenrir\Parts\Message;
 use Ragnarok\Fenrir\Parts\Channel;
 use Ragnarok\Fenrir\Parts\GuildMember;
 
+use React\Promise\PromiseInterface;
 use Naneynonn\Language;
 
 use function React\Promise\reject;
 use function React\Promise\resolve;
 use function Naneynonn\getIgnoredPermissions;
 
-class Zalgo
+final class Zalgo
 {
   private const TYPE = 'zalgo';
 
@@ -57,10 +59,9 @@ class Zalgo
 
     return resolve([
       'module' => self::TYPE,
-      'reason' => [
-        'log' => $this->lng->trans('embed.reason.zalgo-text'),
-        'timeout' => $this->lng->trans('embed.reason.zalgo-text')
-      ]
+      'logReason' => $this->lng->trans('embed.reason.zalgo-text'),
+      'timeoutReason' => $this->lng->trans('embed.reason.zalgo-text'),
+      'deleteReason' => $this->lng->trans('delete.' . self::TYPE)
     ]);
   }
 

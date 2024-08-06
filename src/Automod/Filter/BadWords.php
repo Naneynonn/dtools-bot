@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Naneynonn\Filter;
+namespace Naneynonn\Automod\Filter;
 
 use React\Promise\PromiseInterface;
 
@@ -31,7 +31,7 @@ use function React\Promise\resolve;
 
 use function Naneynonn\getIgnoredPermissions;
 
-class BadWords
+final class BadWords
 {
   use Config;
 
@@ -108,11 +108,9 @@ class BadWords
 
     return resolve([
       'module' => self::TYPE,
-      'reason' => [
-        'log' => $reason,
-        'timeout' => $reason,
-        'delete' => $reason_del
-      ]
+      'logReason' => $reason,
+      'timeoutReason' => $reason,
+      'deleteReason' => $reason_del
     ]);
   }
 
@@ -139,11 +137,11 @@ class BadWords
 
     return resolve([
       'module' => self::TYPE,
-      'reason' => [
-        'log' => $reason,
-        'timeout' => $reason,
-        'delete' => $reason_del
-      ]
+      'logReason' => $reason,
+      'timeoutReason' => $reason,
+      'deleteReason' => $reason_del,
+      'message' => $this->lng->trans('embed.sticker-name', ['%sticker%' => $sticker->name]),
+      'type' => 'sticker'
     ]);
   }
 
@@ -183,19 +181,16 @@ class BadWords
 
     $result = [
       'module' => self::TYPE,
-      'reason' => [
-        'log' => $reason,
-        'timeout' => $reason,
-        'delete' => $reason_del
-      ]
+      'logReason' => $reason,
+      'timeoutReason' => $reason,
+      'deleteReason' => $reason_del,
+      'type' => 'lazy'
     ];
 
     // Добавляем 'lazy', если $msg_premium не пуст
     if (!empty($msg_premium)) {
-      $result['lazy'] = [
-        'message' => $msg_premium,
-        'ids' => $msg_ids
-      ];
+      $result['lazyIds'] = $msg_ids;
+      $result['message'] = $msg_premium;
     }
 
     return resolve($result);
@@ -227,12 +222,11 @@ class BadWords
 
     return resolve([
       'module' => self::TYPE,
-      'reason' => [
-        'log' => $reason,
-        'timeout' => $reason,
-        'delete' => $reason_del,
-        'text' => $badword_check['message']
-      ]
+      'logReason' => $reason,
+      'timeoutReason' => $reason,
+      'deleteReason' => $reason_del,
+      'message' => $badword_check['message'],
+      'type' => 'image'
     ]);
   }
 

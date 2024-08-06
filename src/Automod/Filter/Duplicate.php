@@ -1,22 +1,24 @@
 <?php
 
-namespace Naneynonn\Filter;
+declare(strict_types=1);
 
-use React\Promise\PromiseInterface;
+namespace Naneynonn\Automod\Filter;
 
 use Ragnarok\Fenrir\Gateway\Events\MessageCreate;
 use Ragnarok\Fenrir\Gateway\Events\MessageUpdate;
+
 use Ragnarok\Fenrir\Parts\Message;
 use Ragnarok\Fenrir\Parts\Channel;
 use Ragnarok\Fenrir\Parts\GuildMember;
 
+use React\Promise\PromiseInterface;
 use Naneynonn\Language;
 
 use function React\Promise\reject;
 use function React\Promise\resolve;
 use function Naneynonn\getIgnoredPermissions;
 
-class Duplicate
+final class Duplicate
 {
   private const TYPE = 'duplicate';
 
@@ -54,10 +56,9 @@ class Duplicate
 
     return resolve([
       'module' => self::TYPE,
-      'reason' => [
-        'log' => $this->lng->trans('embed.reason.duplicate-reason', ['%percent%' => $this->settings[self::TYPE . '_percent']]),
-        'timeout' => $this->lng->trans('embed.reason.duplicate')
-      ]
+      'logReason' => $this->lng->trans('embed.reason.duplicate-reason', ['%percent%' => $this->settings[self::TYPE . '_percent']]),
+      'timeoutReason' => $this->lng->trans('embed.reason.duplicate'),
+      'deleteReason' => $this->lng->trans('delete.' . self::TYPE)
     ]);
   }
 

@@ -1,8 +1,8 @@
 <?php
 
-namespace Naneynonn\Filter;
+declare(strict_types=1);
 
-use React\Promise\PromiseInterface;
+namespace Naneynonn\Automod\Filter;
 
 use Ragnarok\Fenrir\Gateway\Events\MessageCreate;
 use Ragnarok\Fenrir\Gateway\Events\MessageUpdate;
@@ -11,12 +11,13 @@ use Ragnarok\Fenrir\Parts\Channel;
 use Ragnarok\Fenrir\Parts\GuildMember;
 
 use Naneynonn\Language;
+use React\Promise\PromiseInterface;
 
 use function React\Promise\reject;
 use function React\Promise\resolve;
 use function Naneynonn\getIgnoredPermissions;
 
-class Caps
+final class Caps
 {
   private const TYPE = 'caps';
 
@@ -54,10 +55,9 @@ class Caps
 
     return resolve([
       'module' => self::TYPE,
-      'reason' => [
-        'log' => $this->lng->trans('embed.reason.abuse-caps', ['%percent%' => $this->settings[self::TYPE . '_percent']]),
-        'timeout' => $this->lng->trans('embed.reason.caps')
-      ]
+      'logReason' => $this->lng->trans('embed.reason.abuse-caps', ['%percent%' => $this->settings[self::TYPE . '_percent']]),
+      'timeoutReason' => $this->lng->trans('embed.reason.caps'),
+      'deleteReason' => $this->lng->trans('delete.' . self::TYPE)
     ]);
   }
 

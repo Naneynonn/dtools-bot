@@ -9,14 +9,13 @@ use Ragnarok\Fenrir\Constants\Events;
 
 use Naneynonn\Attr\EventHandlerFor;
 use Naneynonn\Core\App\EventHelper;
-use Naneynonn\MessageProcessor;
+use Naneynonn\Automod\ModerationHandler;
 
 #[EventHandlerFor(Events::MESSAGE_UPDATE)]
 class MessageUpdateEvent extends EventHelper
 {
   public function handle(MessageUpdate $event): void
   {
-    $processor = new MessageProcessor(message: $event, lng: $this->lng, discord: $this->discord, redis: $this->redis, loop: $this->loop);
-    $processor->process();
+    (new ModerationHandler(message: $event, discord: $this->discord, lng: $this->lng, redis: $this->redis, loop: $this->loop))->handle();
   }
 }

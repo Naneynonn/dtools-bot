@@ -1,22 +1,24 @@
 <?php
 
-namespace Naneynonn\Filter;
+declare(strict_types=1);
 
-use React\Promise\PromiseInterface;
+namespace Naneynonn\Automod\Filter;
 
 use Ragnarok\Fenrir\Gateway\Events\MessageCreate;
 use Ragnarok\Fenrir\Gateway\Events\MessageUpdate;
+
 use Ragnarok\Fenrir\Parts\Message;
 use Ragnarok\Fenrir\Parts\Channel;
 use Ragnarok\Fenrir\Parts\GuildMember;
 
+use React\Promise\PromiseInterface;
 use Naneynonn\Language;
 
 use function React\Promise\reject;
 use function React\Promise\resolve;
 use function Naneynonn\getIgnoredPermissions;
 
-class Russian
+final class Russian
 {
   private const TYPE = 'russian';
 
@@ -54,10 +56,9 @@ class Russian
 
     return resolve([
       'module' => self::TYPE,
-      'reason' => [
-        'log' => $this->lng->trans('embed.reason.russian'),
-        'timeout' => $this->lng->trans('embed.reason.russian')
-      ]
+      'logReason' => $this->lng->trans('embed.reason.russian'),
+      'timeoutReason' => $this->lng->trans('embed.reason.russian'),
+      'deleteReason' => $this->lng->trans('delete.' . self::TYPE)
     ]);
   }
 
