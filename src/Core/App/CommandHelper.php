@@ -70,7 +70,7 @@ abstract class CommandHelper
 
   protected function isServerAdmin(InteractionCreate $interaction): bool
   {
-    return hasPermission(bitmask: (int) $interaction->member->permissions, permission: Permission::ADMINISTRATOR);
+    return hasPermission(bitmask: (int) ($interaction->member?->permissions ?? 0), permission: Permission::ADMINISTRATOR);
   }
 
   protected function setLocale(?string $locale): void
