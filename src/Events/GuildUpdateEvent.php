@@ -13,6 +13,8 @@ use Naneynonn\Attr\EventHandlerFor;
 use Naneynonn\Model;
 use Naneynonn\Core\App\EventHelper;
 
+use Exception;
+
 #[EventHandlerFor(Events::GUILD_UPDATE)]
 class GuildUpdateEvent extends EventHelper
 {
@@ -23,6 +25,8 @@ class GuildUpdateEvent extends EventHelper
       $model = new Model();
       $model->updateGuildInfo(name: $guild->name, is_active: true, icon: $guild->icon ?? null, members_online: $guild->approximate_presence_count, members_all: $guild->approximate_member_count, server_id: $guild->id);
       $model->close();
+    })->otherwise(function (Exception $e) {
+      echo 'events.guild_update: ' . $e->getMessage() . PHP_EOL;
     });
 
     $this->getMemoryUsage(text: "[~] Events::GUILD_UPDATE | ID: {$event->id}");
