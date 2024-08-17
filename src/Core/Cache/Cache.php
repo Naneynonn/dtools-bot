@@ -20,10 +20,10 @@ final class Cache
     $key = self::generateKey($params);
 
     $result = await($redis->get($key));
-    if (!is_null($result)) return unserialize($result);
+    if (!empty($result)) return unserialize($result);
 
     $result = await($fn());
-    if (!is_null($result)) {
+    if (!empty($result)) {
       $redis->set($key, serialize($result), 'EX', $ttl);
     }
 
