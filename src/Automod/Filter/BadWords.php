@@ -157,10 +157,11 @@ final class BadWords
 
     $this->addMessageInRedis(message: $this->message->content);
 
-    $msg_premium = $this->getAllWordsAsString(); // Выведет составленное сообщение из слов
+    $wordsData = $this->getWordsData();
+    $msg_premium = $this->getAllWordsAsString(data: $wordsData); // Выведет составленное сообщение из слов
     if (empty($msg_premium)) return $this->sendReject(text: 'No Words');
 
-    $msg_ids = $this->getMessageIds();
+    $msg_ids = $this->getMessageIds(data: $wordsData);
 
     $badword_check = $this->fetchBadWords(message: $msg_premium, skip: $skip, skipTypes: $this->settings['badwords_exclusion_flags']);
     if (!isset($badword_check['badwords'])) return $this->sendReject(text: 'Err API');
@@ -184,7 +185,8 @@ final class BadWords
       'logReason' => $reason,
       'timeoutReason' => $reason,
       'deleteReason' => $reason_del,
-      'type' => 'lazy'
+      'type' => 'lazy',
+      'isLazy' => true
     ];
 
     // Добавляем 'lazy', если $msg_premium не пуст
@@ -241,10 +243,8 @@ final class BadWords
       return $path;
     } catch (\Exception $e) {
       echo 'Err fetch bw: ' .  $e->getMessage(), PHP_EOL;
-      return null;
+      return '';
     }
-
-    return json_decode((string) $response->getBody(), true);
   }
 
   private function recognizeText(string $path): string
@@ -309,7 +309,7 @@ final class BadWords
     $filesystem = Factory::create();
 
     $imagePath = $this->downloadImage($url, $filesystem);
-    if ($imagePath === null) {
+    if (empty($imagePath)) {
       return '';
     }
 
@@ -338,7 +338,7 @@ final class BadWords
 
     // Проверка общего количества слов
     if (await($this->redis->llen($listKey)) > 10) {
-      $this->redis->del($listKey); // Удаление списка, если слов больше 10
+      $this->redis->lpop($listKey); // Удаление первого элемента списка, если слов больше 10
     }
 
     // Создание JSON-объекта с word и message_id
@@ -351,14 +351,26 @@ final class BadWords
     $this->redis->expire($listKey, 30); // Установка TTL для списка
   }
 
-  // Возвращает все слова в виде строки для указанного guildId и channelId
-  public function getAllWordsAsString(): string
+  private function getWordsData(): array
   {
     $listKey = "messages:{$this->channel->guild_id}:{$this->message->channel_id}";
-    $wordsData = await($this->redis->lrange($listKey, 0, -1)); // Получение всех элементов из списка
+    $wordsData = await($this->redis->lrange($listKey, 0, -1));
 
-    $words = [];
-    foreach ($wordsData as $wordData) {
+    if (empty($wordsData) || !is_array($wordsData)) {
+      return [];
+    }
+
+    return $wordsData;
+  }
+
+  // Возвращает все слова в виде строки для указанного guildId и channelId
+  public function getAllWordsAsString(array $data): string
+  {
+    if (empty($data)) {
+      return [];
+    }
+
+    foreach ($data as $wordData) {
       $data = json_decode($wordData, true);
       $words[] = $data['message'];
     }
@@ -372,13 +384,14 @@ final class BadWords
     $this->redis->del($listKey);
   }
 
-  public function getMessageIds(): array
+  public function getMessageIds(array $data): array
   {
-    $listKey = "messages:{$this->channel->guild_id}:{$this->message->channel_id}";
-    $wordsData = await($this->redis->lrange($listKey, 0, -1));
+    if (empty($data)) {
+      return '';
+    }
 
     $messageIds = [];
-    foreach ($wordsData as $wordData) {
+    foreach ($data as $wordData) {
       $data = json_decode($wordData, true);
       $messageIds[] = $data['id'];
     }
