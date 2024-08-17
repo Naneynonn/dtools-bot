@@ -134,6 +134,8 @@ final class ModerationHandler
         $promises = array_merge($promises, $this->processImages(...$params));
       }
 
+      if (empty($promises)) return;
+
       any($promises)->then(function ($result) use ($settings, $channel) {
         $type = !empty($result['type']) ? ' ' . $result['type'] : null;
 
@@ -146,7 +148,11 @@ final class ModerationHandler
         $this->logToChannel(settings: $settings, reason: $result['logReason']);
         $this->addUserTimeout(settings: $settings, module: $result['module'], reason: $result['timeoutReason'], channel: $channel);
         $this->getMemoryUsage(text: '[-] Del mod: ' . $result['module'] . $type);
+      })->otherwise(function (Exception $e) {
+        echo 'automod.any.after: ' . $e->getMessage() . PHP_EOL;
       });
+    })->otherwise(function (Exception $e) {
+      echo 'automod.any.before: ' . $e->getMessage() . PHP_EOL;
     });
   }
 
@@ -211,7 +217,7 @@ final class ModerationHandler
 
     $this->validateWebhook(
       settings: $settings,
-      callback: fn (Webhook $webhook) => Embeds::messageDelete(discord: $this->discord, webhook: $webhook, message: $this->message, lng: $this->lng, reason: $reason)
+      callback: fn(Webhook $webhook) => Embeds::messageDelete(discord: $this->discord, webhook: $webhook, message: $this->message, lng: $this->lng, reason: $reason)
     );
   }
 
@@ -231,7 +237,7 @@ final class ModerationHandler
 
     $this->validateWebhook(
       settings: $settings,
-      callback: fn (Webhook $webhook) => Embeds::timeoutMember(discord: $this->discord, webhook: $webhook, message: $this->message, lng: $this->lng, reason: $reason, count: $settings[$warnings], timeout: $settings[$timeout])
+      callback: fn(Webhook $webhook) => Embeds::timeoutMember(discord: $this->discord, webhook: $webhook, message: $this->message, lng: $this->lng, reason: $reason, count: $settings[$warnings], timeout: $settings[$timeout])
     );
   }
 
@@ -298,7 +304,7 @@ final class ModerationHandler
   {
     return Cache::request(
       redis: $this->redis,
-      fn: fn () => $this->discord->rest->channel->get($this->message->channel_id),
+      fn: fn() => $this->discord->rest->channel->get($this->message->channel_id),
       params: ['channel_id' => $this->message->channel_id]
     );
   }
@@ -307,7 +313,7 @@ final class ModerationHandler
   {
     return Cache::request(
       redis: $this->redis,
-      fn: fn () => $this->discord->rest->guild->getMember(guildId: $channel->guild_id, memberId: $this->message->author->id),
+      fn: fn() => $this->discord->rest->guild->getMember(guildId: $channel->guild_id, memberId: $this->message->author->id),
       params: [
         'guild_id' => $channel->guild_id,
         'member_id' => $this->message->author->id
@@ -326,7 +332,7 @@ final class ModerationHandler
     )->then(function (Message $message) use ($interval) {
       $this->loop->addTimer(
         $interval,
-        fn () => $this->discord->rest->channel->deleteMessage(channelId: $message->channel_id, messageId: $message->id)
+        fn() => $this->discord->rest->channel->deleteMessage(channelId: $message->channel_id, messageId: $message->id)
       );
     })->otherwise(function (Exception $e) {
       echo 'automod.handle.createMessage: ' . $e->getMessage() . PHP_EOL;
