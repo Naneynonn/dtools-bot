@@ -13,7 +13,6 @@ use Ragnarok\Fenrir\Parts\Webhook;
 
 use Ragnarok\Fenrir\Enums\Permission;
 
-
 function getIgnoredPermissions(?array $perm, MessageUpdate|MessageCreate $message, string $selection, ?GuildMember $member = null, ?string $parent_id = null): bool
 {
   if (!$perm) return false;
@@ -40,26 +39,22 @@ function getIgnoredPermissions(?array $perm, MessageUpdate|MessageCreate $messag
     }
   }
 
-  // Проверки
-  if (!empty($member)) {
-    if (!empty($ids['role']) && $member->roles && array_intersect($ids['role'], $member->roles)) {
-      return true;
-    }
-  } else {
-    if (!empty($ids['role']) && $message->member->roles && array_intersect($ids['role'], $message->member->roles)) {
-      return true;
-    }
-  }
+  // Использование ?-> для безопасного обращения к свойству member
+  $currentMember = $member ?? $message->member;
 
-  if (!empty($ids['channel']) && in_array($message->channel_id, $ids['channel'])) {
+  if (!empty($ids['role']) && !empty($currentMember?->roles) && array_intersect($ids['role'], $currentMember->roles)) {
     return true;
   }
 
-  if (!empty($ids['user']) && in_array($message->author->id, $ids['user'])) {
+  if (!empty($ids['channel']) && in_array($message->channel_id, $ids['channel'], true)) {
     return true;
   }
 
-  if (!empty($ids['category']) && $parent_id && in_array($parent_id, $ids['category'])) {
+  if (!empty($ids['user']) && in_array($message->author->id, $ids['user'], true)) {
+    return true;
+  }
+
+  if (!empty($ids['category']) && $parent_id && in_array($parent_id, $ids['category'], true)) {
     return true;
   }
 
