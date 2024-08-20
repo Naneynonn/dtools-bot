@@ -367,7 +367,7 @@ final class BadWords
   public function getAllWordsAsString(array $data): string
   {
     if (empty($data)) {
-      return [];
+      return '';
     }
 
     foreach ($data as $wordData) {
@@ -387,7 +387,7 @@ final class BadWords
   public function getMessageIds(array $data): array
   {
     if (empty($data)) {
-      return '';
+      return [];
     }
 
     $messageIds = [];
