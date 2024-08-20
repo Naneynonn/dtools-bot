@@ -20,6 +20,16 @@ final class Cache
     $key = self::generateKey($params);
 
     $result = await($redis->get($key));
+
+    // try {
+    //   $data = @unserialize($result);
+    //   if ($data === false) {
+    //     print_r($result);
+    //   }
+    // } catch (\Throwable $th) {
+    //   //throw $th;
+    // }
+
     if (!empty($result)) return unserialize($result);
 
     $result = await($fn());

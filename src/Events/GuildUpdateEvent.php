@@ -29,6 +29,6 @@ class GuildUpdateEvent extends EventHelper
       echo 'events.guild_update: ' . $e->getMessage() . PHP_EOL;
     });
 
-    $this->getMemoryUsage(text: "[~] Events::GUILD_UPDATE | ID: {$event->id}");
+    // $this->getMemoryUsage(text: "[~] Events::GUILD_UPDATE | ID: {$event->id}");
   }
 }

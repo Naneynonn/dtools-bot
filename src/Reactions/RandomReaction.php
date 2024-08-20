@@ -49,6 +49,7 @@ final class RandomReaction
     if (!$settings || !$settings['is_enable']) return;
 
     $channel = $this->getChannel();
+    if (empty($channel)) return;
 
     $perm = $model->getServerPerm(id: $this->message->guild_id, module: 'reactions');
     if ($this->isSkip(perm: $perm, channel: $channel)) return;
@@ -59,12 +60,16 @@ final class RandomReaction
   private function handle(): void
   {
     async(function () {
-      $guild = $this->getGuild();
+      try {
+        $guild = $this->getGuild();
 
-      $num = $this->getRandomEmoji(emojis: $guild->emojis);
-      $this->createReaction(emoji: $guild->emojis[$num]);
+        $num = $this->getRandomEmoji(emojis: $guild->emojis);
+        $this->createReaction(emoji: $guild->emojis[$num]);
 
-      $this->getMemoryUsage(text: 'Random Reaction |');
+        $this->getMemoryUsage(text: 'Random Reaction |');
+      } catch (\Throwable $th) {
+        echo 'reactions.rendom: ' . $th->getMessage() . PHP_EOL;
+      }
     })();
   }
 
