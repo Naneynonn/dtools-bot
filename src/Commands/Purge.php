@@ -102,7 +102,7 @@ class Purge extends CommandHelper
           getMessagesBuilder: GetMessagesBuilder::new()->setLimit($limit)
         ));
 
-        $ids = $this->collectIds(messages: $messages, condition: fn ($message) => $message->author->id == $user_id);
+        $ids = $this->collectIds(messages: $messages, condition: fn($message) => $message->author->id == $user_id);
 
         if (empty($ids)) {
           $this->sendMessage(command: $command, embed: Embeds::danger(text: $this->lng->trans('embed.purge.old')));
@@ -148,7 +148,7 @@ class Purge extends CommandHelper
           getMessagesBuilder: GetMessagesBuilder::new()->setLimit($limit)
         ));
 
-        $ids = $this->collectIds(messages: $messages, condition: fn ($message) => $message->author->bot);
+        $ids = $this->collectIds(messages: $messages, condition: fn($message) => $message->author->bot ?? false);
 
         if (empty($ids)) {
           $this->sendMessage(command: $command, embed: Embeds::danger(text: $this->lng->trans('embed.purge.old')));
@@ -163,7 +163,7 @@ class Purge extends CommandHelper
           '%msg%' => $this->lng->trans('count.messages', ['count' => $count_ids])
         ])));
       } catch (\Throwable $th) {
-        echo 'purge.bots' . $th->getMessage() . PHP_EOL;
+        echo 'purge.bots: ' . $th->getMessage() . PHP_EOL;
       }
     })();
   }
