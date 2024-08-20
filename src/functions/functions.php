@@ -40,7 +40,7 @@ function getIgnoredPermissions(?array $perm, MessageUpdate|MessageCreate $messag
   }
 
   // Использование ?-> для безопасного обращения к свойству member
-  $currentMember = $member ?? $message->member;
+  $currentMember = $member ?? $message->member ?? null;
 
   if (!empty($ids['role']) && !empty($currentMember?->roles) && array_intersect($ids['role'], $currentMember->roles)) {
     return true;
