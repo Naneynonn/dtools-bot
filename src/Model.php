@@ -130,4 +130,12 @@ class Model
 
     $sql->execute();
   }
+
+  public function getSettingsReactions(string $id): array|false
+  {
+    $sql = $this->db->prepare("SELECT * FROM settings_reactions r LEFT JOIN servers s ON r.server_id = s.server_id WHERE r.server_id = ?");
+    $sql->execute([$id]);
+
+    return $sql->fetch();
+  }
 }

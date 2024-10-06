@@ -24,7 +24,7 @@ use React\EventLoop\LoopInterface;
 use Clue\React\Redis\LazyClient as RedisClient;
 use Carbon\Carbon;
 
-use Exception;
+use Throwable;
 
 use Naneynonn\Language;
 use Naneynonn\Model;
@@ -74,8 +74,8 @@ final class ModerationHandler
     async(function () {
       try {
         $this->prepareContext();
-      } catch (\Throwable $th) {
-        echo 'automod.handle: ' . $th->getMessage() . PHP_EOL;
+      } catch (Throwable $e) {
+        echo 'automod.handle: ' . $e->getMessage() . PHP_EOL;
       }
     })();
   }
@@ -83,14 +83,10 @@ final class ModerationHandler
   private function prepareContext(): void
   {
     $channel = $this->getChannel();
-    $params = [$channel];
+    if (empty($channel)) return;
 
-    if (empty($this->message->member)) {
-      $member = $this->getMember(channel: $channel);
-      $params[] = $member;
-    }
-
-    $this->process(...$params);
+    $member = $this->message->member ?? $this->getMember(channel: $channel) ?? null;
+    $this->process($channel, $member);
   }
 
   private function process(Channel $channel, ?GuildMember $member = null): void
@@ -117,17 +113,7 @@ final class ModerationHandler
     }
 
     any($promises)->then(function ($result) use ($settings, $channel) {
-      $type = !empty($result['type']) ? ' ' . $result['type'] : null;
-
-      $this->deleteMessage(ids: $result['lazyIds'] ?? null, isLazy: $result['isLazy'] ?? null);
-      if (!empty($result['message'])) $this->message->content = $result['message'];
-
-      $text_string = outputString(settings: $settings, module: $result['module'], message: $this->message, reason: $result['deleteReason']);
-      $this->createMessage(content: $text_string, settings: $settings, module: $result['module']);
-
-      $this->logToChannel(settings: $settings, reason: $result['logReason']);
-      $this->addUserTimeout(settings: $settings, module: $result['module'], reason: $result['timeoutReason'], channel: $channel);
-      $this->getMemoryUsage(text: '[-] Del mod: ' . $result['module'] . $type);
+      $this->handleResult(result: $result, settings: $settings, channel: $channel);
     }, function () use ($params, $settings, $channel) {
       $promises = [];
       if (!empty($this->message->attachments) || !empty($this->message->embeds)) {
@@ -137,23 +123,30 @@ final class ModerationHandler
       if (empty($promises)) return;
 
       any($promises)->then(function ($result) use ($settings, $channel) {
-        $type = !empty($result['type']) ? ' ' . $result['type'] : null;
-
-        $this->deleteMessage(ids: $result['lazyIds'] ?? null, isLazy: $result['isLazy'] ?? null);
-        if (!empty($result['message'])) $this->message->content = $result['message'];
-
-        $text_string = outputString(settings: $settings, module: $result['module'], message: $this->message, reason: $result['deleteReason']);
-        $this->createMessage(content: $text_string, settings: $settings, module: $result['module']);
-
-        $this->logToChannel(settings: $settings, reason: $result['logReason']);
-        $this->addUserTimeout(settings: $settings, module: $result['module'], reason: $result['timeoutReason'], channel: $channel);
-        $this->getMemoryUsage(text: '[-] Del mod: ' . $result['module'] . $type);
-      })->otherwise(function (Exception $e) {
+        $this->handleResult(result: $result, settings: $settings, channel: $channel);
+      })->otherwise(static function (Throwable $e) {
         echo 'automod.any.after: ' . $e->getMessage() . PHP_EOL;
       });
-    })->otherwise(function (Exception $e) {
+    })->otherwise(static function (Throwable $e) {
       echo 'automod.any.before: ' . $e->getMessage() . PHP_EOL;
     });
+  }
+
+  private function handleResult(array $result, array $settings, Channel $channel): void
+  {
+    $type = !empty($result['type']) ? ' ' . $result['type'] : null;
+
+    $this->deleteMessage(ids: $result['lazyIds'] ?? null, isLazy: $result['isLazy'] ?? null);
+    if (!empty($result['message'])) {
+      $this->message->content = $result['message'];
+    }
+
+    $text_string = outputString(settings: $settings, module: $result['module'], message: $this->message, reason: $result['deleteReason']);
+    $this->createMessage(content: $text_string, settings: $settings, module: $result['module']);
+
+    $this->logToChannel(settings: $settings, reason: $result['logReason']);
+    $this->addUserTimeout(settings: $settings, module: $result['module'], reason: $result['timeoutReason'], channel: $channel);
+    $this->getMemoryUsage(text: '[-] Del mod: ' . $result['module'] . $type);
   }
 
   private function processContent(Model $model, Channel $channel, array $settings, array $perm, ?GuildMember $member = null): array
@@ -203,7 +196,7 @@ final class ModerationHandler
     }
 
     foreach ($attachments as $attachment) {
-      if (strpos($attachment->content_type, 'image/') === 0) {
+      if (isset($attachment->content_type) && strpos($attachment->content_type, 'image/') === 0) {
         $promises[] = $badwords->processImage(url: $attachment->url);
       }
     }
@@ -284,9 +277,9 @@ final class ModerationHandler
     //   fn: fn () => $this->discord->rest->webhook->getChannelWebhooks(channelId: $settings['log_channel']),
     //   params: $params
     // );
-    $webhook = getOneWebhook(webhooks: $webhooks);
+    $webhook = getOneWebhook(webhooks: $webhooks ?? []);
 
-    if (!$webhook) {
+    if (empty($webhook)) {
       $webhook = await($this->discord->rest->webhook->create(
         channelId: $settings['log_channel'],
         builder: CreateWebhookBuilder::new()
@@ -295,6 +288,8 @@ final class ModerationHandler
         reason: $this->lng->trans('audit.webhook.create')
       ));
       // Cache::del(redis: $this->redis, params: $params);
+
+      if (empty($webhook)) return;
     }
 
     $callback($webhook);
@@ -329,12 +324,14 @@ final class ModerationHandler
       channelId: $this->message->channel_id,
       message: MessageBuilder::new()
         ->setContent($content)
-    )->then(function (Message $message) use ($interval) {
+    )->then(function (?Message $message) use ($interval) {
+      if (empty($message)) return;
+
       $this->loop->addTimer(
         $interval,
         fn() => $this->discord->rest->channel->deleteMessage(channelId: $message->channel_id, messageId: $message->id)
       );
-    })->otherwise(function (Exception $e) {
+    })->otherwise(static function (Throwable $e) {
       echo 'automod.handle.createMessage: ' . $e->getMessage() . PHP_EOL;
     });
   }

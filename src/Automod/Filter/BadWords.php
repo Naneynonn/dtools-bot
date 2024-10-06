@@ -24,6 +24,7 @@ use Clue\React\Redis\LazyClient as RedisClient;
 use thiagoalessio\TesseractOCR\TesseractOCR;
 
 use Imagick;
+use Throwable;
 
 use function React\Async\await;
 use function React\Promise\reject;
@@ -241,7 +242,7 @@ final class BadWords
       $response = await($client->get(url: $url));
       $filesystem->file($path)->putContents((string) $response->getBody());
       return $path;
-    } catch (\Exception $e) {
+    } catch (Throwable $e) {
       echo 'Err fetch bw: ' .  $e->getMessage(), PHP_EOL;
       return '';
     }
@@ -408,7 +409,7 @@ final class BadWords
   private function skipWords(array $skip): string
   {
     if (!$skip) $skip = '';
-    else $skip = implode(', ', array_map(function ($entry) {
+    else $skip = implode(', ', array_map(static function ($entry) {
       return $entry['word'];
     }, $skip));
 
@@ -434,7 +435,7 @@ final class BadWords
 
     try {
       $response = await($client->post(url: $url, headers: $headers, body: $body));
-    } catch (\Exception $e) {
+    } catch (Throwable $e) {
       echo 'Err fetch bw: ' .  $e->getMessage(), PHP_EOL;
       return null;
     }

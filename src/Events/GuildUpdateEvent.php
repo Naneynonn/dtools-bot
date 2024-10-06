@@ -13,19 +13,20 @@ use Naneynonn\Attr\EventHandlerFor;
 use Naneynonn\Model;
 use Naneynonn\Core\App\EventHelper;
 
-use Exception;
+use Throwable;
 
 #[EventHandlerFor(Events::GUILD_UPDATE)]
 class GuildUpdateEvent extends EventHelper
 {
   public function handle(GuildUpdate $event): void
   {
-    $this->discord->rest->guild->get(guildId: $event->id, withCounts: true)->then(function (Guild $guild) {
+    $this->discord->rest->guild->get(guildId: $event->id, withCounts: true)->then(function (?Guild $guild) {
+      if (empty($guild)) return;
       // TODO: не хватает онлайна
       $model = new Model();
       $model->updateGuildInfo(name: $guild->name, is_active: true, icon: $guild->icon ?? null, members_online: $guild->approximate_presence_count, members_all: $guild->approximate_member_count, server_id: $guild->id);
       $model->close();
-    })->otherwise(function (Exception $e) {
+    })->otherwise(function (Throwable $e) {
       echo 'events.guild_update: ' . $e->getMessage() . PHP_EOL;
     });
 

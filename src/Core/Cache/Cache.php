@@ -21,17 +21,23 @@ final class Cache
 
     $result = await($redis->get($key));
 
-    // try {
-    //   $data = @unserialize($result);
-    //   if ($data === false) {
-    //     print_r($result);
-    //   }
-    // } catch (\Throwable $th) {
-    //   //throw $th;
-    // }
+    if (!empty($result)) {
+      // Подавляем предупреждения от unserialize() с помощью @
+      $data = @unserialize($result);
 
-    if (!empty($result)) return unserialize($result);
+      if ($data === false && $result != 'b:0;') {
+        // Возникла ошибка при десериализации
+        echo 'cache: Ошибка при десериализации данных для ключа ' . $key . PHP_EOL;
+        echo 'Данные: ' . var_export($result, true) . PHP_EOL;
 
+        // Удаляем проблемный ключ из Redis
+        $redis->del($key);
+      } else {
+        return $data;
+      }
+    }
+
+    // Данные отсутствуют в кэше, выполняем функцию и кэшируем результат
     $result = await($fn());
     if (!empty($result)) {
       $redis->set($key, serialize($result), 'EX', $ttl);
