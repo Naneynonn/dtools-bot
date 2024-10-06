@@ -1,0 +1,18 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Naneynonn\Cron;
+
+use Naneynonn\Attr\CronExpression;
+use Naneynonn\Core\App\CronHelper;
+
+#[CronExpression(expression: '* * * * *', ttl: 0.1)]
+final class ShardInfo extends CronHelper
+{
+  public function handle(): void
+  {
+    $start = microtime(true);
+    $this->sendConsoleLog(info: 'Shard Info', currentTime: microtime(true), elapsedTime: $start);
+  }
+}

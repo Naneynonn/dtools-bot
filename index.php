@@ -37,6 +37,8 @@ $discord->gateway->events->once(Events::READY, function (Ready $event) use ($dis
   $init->setPresence(discord: $discord);
 
   $loader = new Loader($discord, $lng, $event, $redis);
+
+  $loader->loadCron();
   $loader->loadEvents();
   $loader->loadCommands();
 

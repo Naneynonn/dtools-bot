@@ -8,6 +8,7 @@ use Ragnarok\Fenrir\Discord;
 use Ragnarok\Fenrir\Gateway\Events\Ready;
 use Ragnarok\Fenrir\Command\GlobalCommandExtension;
 
+use Naneynonn\Attr\CronExpression;
 use Naneynonn\Attr\EventHandlerFor;
 use Naneynonn\Attr\Command;
 use Naneynonn\Attr\SubCommand;
@@ -16,11 +17,16 @@ use Naneynonn\Language;
 use Naneynonn\Memory;
 use Naneynonn\Core\App\Buffer;
 
-use Clue\React\Redis\LazyClient as RedisClient;
 use React\EventLoop\Loop;
 use React\EventLoop\LoopInterface;
+use React\Promise\PromiseInterface;
+
+use Clue\React\Redis\LazyClient as RedisClient;
+use WyriHaximus\React\Cron;
+use WyriHaximus\React\Cron\Action;
 
 use function Naneynonn\isObjectEmpty;
+use function React\Promise\resolve;
 
 use DirectoryIterator;
 use ReflectionClass;
@@ -156,54 +162,40 @@ class Loader
     $this->getMemoryUsage(text: "[~] Total loaded commands: {$loadedCount} |");
   }
 
-  // public function loadCommands(): void
-  // {
-  //   $details = $this->setName(name: 'Commands');
-  //   $loadedCount = 0;
+  public function loadCron(): void
+  {
+    $details = $this->setName(name: 'Cron');
+    $loadedCount = 0;
+    $actions = [];
 
-  //   $commandExtension = new GlobalCommandExtension();
-  //   $this->discord->registerExtension($commandExtension);
+    foreach (new DirectoryIterator($details['directory']) as $file) {
+      if (!$this->isFile(file: $file)) continue;
 
-  //   foreach (new DirectoryIterator($details['directory']) as $file) {
-  //     if (!$this->isFile(file: $file)) continue;
+      $className = $details['namespace'] . $file->getBasename('.php');
+      $reflection = new ReflectionClass($className);
 
-  //     $className = $details['namespace'] . $file->getBasename('.php');
-  //     $reflection = new ReflectionClass($className);
+      $attributes = $reflection->getAttributes(CronExpression::class);
+      foreach ($attributes as $attribute) {
+        $expression = $attribute->newInstance()->expression;
+        $ttl = $attribute->newInstance()->ttl;
 
-  //     // Проверка наличия глобального атрибута команды
-  //     $globalCommandAttributes = $reflection->getAttributes(Command::class);
-  //     $globalCommandName = $globalCommandAttributes ? $globalCommandAttributes[0]->newInstance()->name : null;
+        $actions[] = new Action(
+          key: $className, // Используйте имя класса как идентификатор
+          mutexTtl: $ttl,
+          expression: $expression,
+          performer: function () use ($className): PromiseInterface {
+            $instance = new $className($this);
+            $instance->handle();
+            return resolve(true);
+          }
+        );
+      }
 
-  //     $instance = new $className($this);
+      $loadedCount++;
+    }
 
-  //     foreach ($reflection->getMethods() as $method) {
-  //       $subCommandAttributes = $method->getAttributes(SubCommand::class);
-  //       foreach ($subCommandAttributes as $attribute) {
+    Cron::create(...$actions);
 
-  //         $subCommandData = $attribute->newInstance();
-  //         $eventName = $globalCommandName . '.' . $subCommandData->name;
-  //         $methodName = $method->getName();
-
-  //         $commandExtension->on($eventName, function (...$args) use ($instance, $methodName) {
-  //           if (empty($args) || isObjectEmpty($args[0])) return;
-  //           $instance->$methodName(...$args);
-  //         });
-
-  //         $loadedCount++;
-  //       }
-  //     }
-
-  //     // Для классов, представляющих одну глобальную команду без подкоманд
-  //     if ($globalCommandName) {
-  //       $commandExtension->on($globalCommandName, function (...$args) use ($instance) {
-  //         if (empty($args) || isObjectEmpty($args[0])) return;
-  //         $instance->handle(...$args); // Предполагается, что метод handle() существует для обработки команды
-  //       });
-
-  //       $loadedCount++;
-  //     }
-  //   }
-
-  //   $this->getMemoryUsage(text: "[~] Total loaded commands: {$loadedCount} |");
-  // }
+    $this->getMemoryUsage(text: "[~] Total loaded cron jobs: {$loadedCount} |");
+  }
 }
