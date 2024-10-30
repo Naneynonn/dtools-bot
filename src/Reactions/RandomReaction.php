@@ -42,6 +42,7 @@ final class RandomReaction
 
   public function get(): void
   {
+    if ($this->message->author->bot ?? false) return;
     if (!$this->isAllow()) return;
 
     $model = new Model();
