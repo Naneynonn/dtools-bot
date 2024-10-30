@@ -15,10 +15,9 @@ use Ragnarok\Fenrir\Enums\Intent;
 use Ragnarok\Fenrir\Enums\StatusType;
 use Ragnarok\Fenrir\Enums\ActivityType;
 
-use React\EventLoop\Loop;
-
 use Naneynonn\Config;
 use Naneynonn\Language;
+use Naneynonn\Core\App\MonologTrim;
 
 use Monolog\Logger;
 use Monolog\Handler\RotatingFileHandler;
@@ -42,7 +41,10 @@ class Init
 
   private function setDiscord(): Discord
   {
-    $log = (new Logger('Fenrir'))->pushHandler(new RotatingFileHandler("logs/fnrr-{$this->shardId}.log", 2, Level::Info));
+    // $log = (new Logger('Fenrir'))->pushHandler(new RotatingFileHandler("logs/fnrr-{$this->shardId}.log", 2, Level::Info));
+    $log = (new Logger('Fenrir'))
+      ->pushHandler(new RotatingFileHandler("logs/fnrr-{$this->shardId}.log", 2, Level::Info))
+      ->pushProcessor(new MonologTrim());
 
     $discord = (new Discord(
       token: self::TOKEN,
