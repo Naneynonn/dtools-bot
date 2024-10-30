@@ -300,7 +300,10 @@ final class ModerationHandler
     return Cache::request(
       redis: $this->redis,
       fn: fn() => $this->discord->rest->channel->get($this->message->channel_id),
-      params: ['channel_id' => $this->message->channel_id]
+      params: [
+        'channel_id' => $this->message->channel_id,
+        'key' => 'automod.getChannel'
+      ]
     );
   }
 
@@ -311,7 +314,8 @@ final class ModerationHandler
       fn: fn() => $this->discord->rest->guild->getMember(guildId: $channel->guild_id, memberId: $this->message->author->id),
       params: [
         'guild_id' => $channel->guild_id,
-        'member_id' => $this->message->author->id
+        'member_id' => $this->message->author->id,
+        'key' => 'automod.getMember'
       ]
     );
   }

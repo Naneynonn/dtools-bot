@@ -13,7 +13,7 @@ use function React\Async\await;
 
 final class Cache
 {
-  private const string NAME = 'cache';
+  private const string NAME = 'cache:dtools';
 
   public static function request(RedisClient $redis, Closure $fn, array $params, int $ttl = 3600): mixed
   {
