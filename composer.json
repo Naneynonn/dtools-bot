@@ -5,12 +5,13 @@
     "symfony/yaml": "^7.1",
     "woeler/phpdiscord": "^4.0",
     "symfony/intl": "^7.1",
-    "exan/fenrir": "^0.13.0",
     "monolog/monolog": "^3.5",
-    "react/http": "^1.9.0",
-    "clue/redis-react": "^2.7",
+    "react/http": "^1.11.0",
+    "clue/redis-react": "^3@dev",
     "thiagoalessio/tesseract_ocr": "^2.13",
-    "react/filesystem": "^0.2@dev"
+    "react/filesystem": "^0.2@dev",
+    "wyrihaximus/react-cron": "^5.0",
+    "exan/fenrir": "dev-promise-v3"
   },
   "autoload": {
     "psr-4": {
