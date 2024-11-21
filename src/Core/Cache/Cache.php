@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Naneynonn\Core\Cache;
 
 use React\Promise\PromiseInterface;
-use Clue\React\Redis\LazyClient as RedisClient;
+use Clue\React\Redis\RedisClient;
 
 use Closure;
 

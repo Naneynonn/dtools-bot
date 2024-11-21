@@ -23,7 +23,7 @@ use Naneynonn\Loader;
 use Naneynonn\Memory;
 use Naneynonn\Language;
 
-use Clue\React\Redis\LazyClient as RedisClient;
+use Clue\React\Redis\RedisClient;
 use React\EventLoop\LoopInterface;
 
 use function Naneynonn\hasPermission;

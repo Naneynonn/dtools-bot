@@ -15,7 +15,7 @@ use Naneynonn\Model;
 
 use Random\Engine\Mt19937;
 use Random\Randomizer;
-use Clue\React\Redis\LazyClient as RedisClient;
+use Clue\React\Redis\RedisClient;
 use Ragnarok\Fenrir\Parts\Channel;
 use Ragnarok\Fenrir\Parts\Guild;
 
