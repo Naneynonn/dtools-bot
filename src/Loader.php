@@ -21,7 +21,7 @@ use React\EventLoop\Loop;
 use React\EventLoop\LoopInterface;
 use React\Promise\PromiseInterface;
 
-use Clue\React\Redis\LazyClient as RedisClient;
+use Clue\React\Redis\RedisClient;
 use WyriHaximus\React\Cron;
 use WyriHaximus\React\Cron\Action;
 
@@ -98,7 +98,7 @@ class Loader
         $eventName = $attribute->newInstance()->eventName;
 
         $instance = new $className($this);
-        $this->discord->gateway->events->on($eventName, function (...$args) use ($instance) {
+        $this->discord->gateway->events->on($eventName, static function (...$args) use ($instance) {
           if (empty($args) || isObjectEmpty($args[0])) return;
           $instance->handle(...$args);
         });
@@ -140,7 +140,7 @@ class Loader
           $eventName = $globalCommandName . '.' . $subCommandData->name;
           $methodName = $method->getName();
 
-          $commandExtension->on($eventName, function (...$args) use ($instance, $methodName) {
+          $commandExtension->on($eventName, static function (...$args) use ($instance, $methodName) {
             $instance->$methodName(...$args);
           });
 
@@ -150,7 +150,7 @@ class Loader
 
       // Для классов, представляющих одну глобальную команду без подкоманд
       if ($globalCommandName && !$hasSubCommands) {
-        $commandExtension->on($globalCommandName, function (...$args) use ($instance) {
+        $commandExtension->on($globalCommandName, static function (...$args) use ($instance) {
           if (empty($args) || isObjectEmpty($args[0])) return;
           $instance->handle(...$args); // Предполагается, что метод handle() существует для обработки команды
         });
