@@ -15,6 +15,7 @@ use Naneynonn\Embeds;
 
 use Carbon\Carbon;
 use Closure;
+use Throwable;
 
 use function React\Async\async;
 use function React\Async\await;
@@ -45,11 +46,7 @@ class Purge extends CommandHelper
 
     async(function () use ($interaction, $limit, $command) {
       try {
-        $messages = await($this->discord->rest->channel->getMessages(
-          channelId: $interaction->channel->id,
-          getMessagesBuilder: GetMessagesBuilder::new()->setLimit($limit)
-        ));
-
+        $messages = $this->getMessages(channel_id: $interaction->channel->id, limit: $limit);
         $ids = $this->collectIds(messages: $messages);
 
         if (empty($ids)) {
@@ -58,13 +55,9 @@ class Purge extends CommandHelper
         }
 
         $this->bulkDeleteMessages(interaction: $interaction, ids: $ids);
-
-        $count_ids = count($ids);
-        $this->sendMessage(command: $command, embed: Embeds::success(text: $this->lng->trans('embed.purge.del', [
-          '%count%' => $count_ids,
-          '%msg%' => $this->lng->trans('count.messages', ['count' => $count_ids])
-        ])));
-      } catch (\Throwable $th) {
+        $this->sendResponse(ids: $ids, command: $command);
+        $this->getMemoryUsage('[~] Command /purge any |');
+      } catch (Throwable $th) {
         echo 'purge.any' . $th->getMessage() . PHP_EOL;
       }
     })();
@@ -97,12 +90,8 @@ class Purge extends CommandHelper
 
     async(function () use ($interaction, $limit, $command, $user_id) {
       try {
-        $messages = await($this->discord->rest->channel->getMessages(
-          channelId: $interaction->channel->id,
-          getMessagesBuilder: GetMessagesBuilder::new()->setLimit($limit)
-        ));
-
-        $ids = $this->collectIds(messages: $messages, condition: fn($message) => $message->author->id == $user_id);
+        $messages = $this->getMessages(channel_id: $interaction->channel->id, limit: $limit);
+        $ids = $this->collectIds(messages: $messages, condition: static fn($message) => $message->author->id == $user_id);
 
         if (empty($ids)) {
           $this->sendMessage(command: $command, embed: Embeds::danger(text: $this->lng->trans('embed.purge.old')));
@@ -110,13 +99,9 @@ class Purge extends CommandHelper
         }
 
         $this->bulkDeleteMessages(interaction: $interaction, ids: $ids);
-
-        $count_ids = count($ids);
-        $this->sendMessage(command: $command, embed: Embeds::success(text: $this->lng->trans('embed.purge.del', [
-          '%count%' => $count_ids,
-          '%msg%' => $this->lng->trans('count.messages', ['count' => $count_ids])
-        ])));
-      } catch (\Throwable $th) {
+        $this->sendResponse(ids: $ids, command: $command);
+        $this->getMemoryUsage('[~] Command /purge user |');
+      } catch (Throwable $th) {
         echo 'purge.user' . $th->getMessage() . PHP_EOL;
       }
     })();
@@ -143,12 +128,8 @@ class Purge extends CommandHelper
 
     async(function () use ($interaction, $limit, $command) {
       try {
-        $messages = await($this->discord->rest->channel->getMessages(
-          channelId: $interaction->channel->id,
-          getMessagesBuilder: GetMessagesBuilder::new()->setLimit($limit)
-        ));
-
-        $ids = $this->collectIds(messages: $messages, condition: fn($message) => $message->author->bot ?? false);
+        $messages = $this->getMessages(channel_id: $interaction->channel->id, limit: $limit);
+        $ids = $this->collectIds(messages: $messages, condition: static fn($message) => $message->author->bot ?? false);
 
         if (empty($ids)) {
           $this->sendMessage(command: $command, embed: Embeds::danger(text: $this->lng->trans('embed.purge.old')));
@@ -156,13 +137,9 @@ class Purge extends CommandHelper
         }
 
         $this->bulkDeleteMessages(interaction: $interaction, ids: $ids);
-
-        $count_ids = count($ids);
-        $this->sendMessage(command: $command, embed: Embeds::success(text: $this->lng->trans('embed.purge.del', [
-          '%count%' => $count_ids,
-          '%msg%' => $this->lng->trans('count.messages', ['count' => $count_ids])
-        ])));
-      } catch (\Throwable $th) {
+        $this->sendResponse(ids: $ids, command: $command);
+        $this->getMemoryUsage('[~] Command /purge bots |');
+      } catch (Throwable $th) {
         echo 'purge.bots: ' . $th->getMessage() . PHP_EOL;
       }
     })();
@@ -198,5 +175,22 @@ class Purge extends CommandHelper
         reason: $this->lng->trans('audit.message.bulk')
       );
     }
+  }
+
+  private function getMessages(string $channel_id, int $limit): array
+  {
+    return await($this->discord->rest->channel->getMessages(
+      channelId: $channel_id,
+      getMessagesBuilder: GetMessagesBuilder::new()->setLimit($limit)
+    ));
+  }
+
+  private function sendResponse(array $ids, CommandInteraction $command): void
+  {
+    $count_ids = count($ids);
+    $this->sendMessage(command: $command, embed: Embeds::success(text: $this->lng->trans('embed.purge.del', [
+      '%count%' => $count_ids,
+      '%msg%' => $this->lng->trans('count.messages', ['count' => $count_ids])
+    ])));
   }
 }

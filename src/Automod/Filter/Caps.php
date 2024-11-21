@@ -12,6 +12,7 @@ use Ragnarok\Fenrir\Parts\GuildMember;
 
 use Naneynonn\Language;
 use React\Promise\PromiseInterface;
+use RuntimeException;
 
 use function React\Promise\reject;
 use function React\Promise\resolve;
@@ -67,8 +68,8 @@ final class Caps
     return round(count($matches[0]) / mb_strlen($text) * 100, 2);
   }
 
-  private function info(string $text): string
+  private function info(string $text): RuntimeException
   {
-    return self::TYPE . ' | ' . $text;
+    return new RuntimeException(self::TYPE . ' | ' . $text);
   }
 }

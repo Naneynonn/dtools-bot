@@ -21,7 +21,7 @@ use Ragnarok\Fenrir\Enums\ImageData;
 use Ragnarok\Fenrir\Enums\EmbedType;
 
 use React\EventLoop\LoopInterface;
-use Clue\React\Redis\LazyClient as RedisClient;
+use Clue\React\Redis\RedisClient;
 use Carbon\Carbon;
 
 use Throwable;
@@ -124,10 +124,10 @@ final class ModerationHandler
 
       any($promises)->then(function ($result) use ($settings, $channel) {
         $this->handleResult(result: $result, settings: $settings, channel: $channel);
-      })->otherwise(static function (Throwable $e) {
+      })->catch(static function (Throwable $e) {
         echo 'automod.any.after: ' . $e->getMessage() . PHP_EOL;
       });
-    })->otherwise(static function (Throwable $e) {
+    })->catch(static function (Throwable $e) {
       echo 'automod.any.before: ' . $e->getMessage() . PHP_EOL;
     });
   }
@@ -335,7 +335,7 @@ final class ModerationHandler
         $interval,
         fn() => $this->discord->rest->channel->deleteMessage(channelId: $message->channel_id, messageId: $message->id)
       );
-    })->otherwise(static function (Throwable $e) {
+    })->catch(static function (Throwable $e) {
       echo 'automod.handle.createMessage: ' . $e->getMessage() . PHP_EOL;
     });
   }

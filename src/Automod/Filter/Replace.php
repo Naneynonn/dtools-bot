@@ -13,6 +13,7 @@ use Ragnarok\Fenrir\Parts\GuildMember;
 
 use React\Promise\PromiseInterface;
 use Naneynonn\Language;
+use RuntimeException;
 
 use function React\Promise\reject;
 use function React\Promise\resolve;
@@ -74,8 +75,8 @@ final class Replace
     return (bool) preg_match('/\b(?=\w*[а-яА-Я])(?=\w*[a-zA-Z])\w*\b/u', $text);
   }
 
-  private function info(string $text): string
+  private function info(string $text): RuntimeException
   {
-    return self::TYPE . ' | ' . $text;
+    return new RuntimeException(self::TYPE . ' | ' . $text);
   }
 }

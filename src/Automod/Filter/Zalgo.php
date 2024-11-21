@@ -13,6 +13,7 @@ use Ragnarok\Fenrir\Parts\GuildMember;
 
 use React\Promise\PromiseInterface;
 use Naneynonn\Language;
+use RuntimeException;
 
 use function React\Promise\reject;
 use function React\Promise\resolve;
@@ -89,8 +90,8 @@ final class Zalgo
     return false;
   }
 
-  private function info(string $text): string
+  private function info(string $text): RuntimeException
   {
-    return self::TYPE . ' | ' . $text;
+    return new RuntimeException(self::TYPE . ' | ' . $text);
   }
 }

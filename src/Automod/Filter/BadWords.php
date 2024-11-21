@@ -20,11 +20,12 @@ use React\Filesystem\Factory;
 use React\Filesystem\AdapterInterface;
 use React\Http\Browser;
 
-use Clue\React\Redis\LazyClient as RedisClient;
+use Clue\React\Redis\RedisClient;
 use thiagoalessio\TesseractOCR\TesseractOCR;
 
 use Imagick;
 use Throwable;
+use RuntimeException;
 
 use function React\Async\await;
 use function React\Promise\reject;
@@ -84,7 +85,7 @@ final class BadWords
   // TODO: Вынести как общий метод
   private function sendReject(string $text): PromiseInterface
   {
-    return reject(ucfirst(self::TYPE) . ' | ' . $text);
+    return reject(new RuntimeException(ucfirst(self::TYPE) . ' | ' . $text));
   }
 
   public function process(): PromiseInterface

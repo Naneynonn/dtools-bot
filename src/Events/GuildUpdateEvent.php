@@ -26,7 +26,7 @@ class GuildUpdateEvent extends EventHelper
       $model = new Model();
       $model->updateGuildInfo(name: $guild->name, is_active: true, icon: $guild->icon ?? null, members_online: $guild->approximate_presence_count, members_all: $guild->approximate_member_count, server_id: $guild->id);
       $model->close();
-    })->otherwise(function (Throwable $e) {
+    })->catch(function (Throwable $e) {
       echo 'events.guild_update: ' . $e->getMessage() . PHP_EOL;
     });
 

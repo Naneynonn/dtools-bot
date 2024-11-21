@@ -13,7 +13,7 @@ use Naneynonn\Init;
 use Naneynonn\Loader;
 use Naneynonn\Language;
 
-use Clue\React\Redis\Factory;
+use Clue\React\Redis\RedisClient;
 
 require './vendor/autoload.php';
 
@@ -24,9 +24,7 @@ $init = new Init(shardId: $shardId, numShards: $numShards);
 $discord = $init->getDiscord();
 
 $lng = new Language();
-
-$factory = new Factory();
-$redis = $factory->createLazyClient('localhost:6379');
+$redis = new RedisClient('localhost:6379');
 
 $interactionHandler = new InteractionHandler();
 $discord->registerExtension($interactionHandler);
