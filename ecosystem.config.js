@@ -2,7 +2,8 @@ const shardCount = 2;
 
 module.exports = {
   apps: Array.from({ length: shardCount }, (_, i) => {
-    const appName = `dtools${i}`;
+    const paddedIndex = String(i).padStart(2, '0');
+    const appName = `dtools${paddedIndex}`;
     const namespace = `fenrir`;
 
     return {
@@ -17,8 +18,8 @@ module.exports = {
       out_file: `./logs/pm2/${appName}-out.log`,
       error_file: `./logs/pm2/${appName}-error.log`,
       min_uptime: 1000,
-      restart_delay: 2000,
       max_restarts: 10,
+      exp_backoff_restart_delay: 100,
       env: {
         NODE_ENV: "development",
       },
