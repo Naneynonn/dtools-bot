@@ -11,7 +11,7 @@
     "thiagoalessio/tesseract_ocr": "^2.13",
     "react/filesystem": "^0.2@dev",
     "wyrihaximus/react-cron": "^5.0",
-    "exan/fenrir": "dev-promise-v3"
+    "exan/fenrir": "dev-feature/compression-buffer@dev"
   },
   "autoload": {
     "psr-4": {
