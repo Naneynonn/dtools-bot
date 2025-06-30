@@ -21,18 +21,16 @@ class GuildCreateEvent extends EventHelper
 
   public function handle(GuildCreate $event): void
   {
-    if ($this->isStart($event->id)) {
-      $this->handleStart($event);
-    } else {
-      $this->handleRegular($event);
-    }
+    $this->isStart($event->id)
+      ? $this->handleStart($event)
+      : $this->handleRegular($event);
   }
 
   private function isStart(string $guildId): bool
   {
     // Первый запуск бота
     // Возможно, проверить присутствие гильдии в списке гильдий из $this->ready.
-    return in_array($guildId, array_map(fn ($guild) => $guild->id, $this->ready->guilds));
+    return in_array($guildId, array_map(fn($guild) => $guild->id, $this->ready->guilds));
   }
 
   private function handleStart(GuildCreate $event): void
