@@ -23,6 +23,11 @@ use Monolog\Logger;
 use Monolog\Handler\RotatingFileHandler;
 use Monolog\Level;
 
+use Ragnarok\Fenrir\Buffer\Multilayer;
+use Ragnarok\Fenrir\Buffer\ZlibStream;
+use Naneynonn\Utils\FutureTickGuild;
+use Clue\React\Redis\RedisClient;
+
 use DirectoryIterator;
 
 class Init
@@ -33,10 +38,18 @@ class Init
   private int $shardId = 0;
   private int $numShards = 1;
 
-  public function __construct(?int $shardId = null, ?int $numShards = null)
+  private string $instanceId;
+  private RedisClient $redis;
+
+  public function __construct(?int $shardId = null, ?int $numShards = null, ?RedisClient $redis = null)
   {
     $this->shardId = $shardId ?? $this->shardId;
     $this->numShards = $numShards ?? $this->numShards;
+    $this->instanceId = bin2hex(random_bytes(8));
+
+    if (!is_null($redis)) {
+      $this->redis = $redis;
+    }
   }
 
   private function setDiscord(): Discord
@@ -49,12 +62,15 @@ class Init
     $discord = (new Discord(
       token: self::TOKEN,
       logger: $log,
-    ))->withGateway(Bitwise::from(
-      Intent::GUILD_MESSAGES,
-      Intent::DIRECT_MESSAGES,
-      Intent::MESSAGE_CONTENT,
-      Intent::GUILDS
-    ))->withRest();
+    ))->withGateway(
+      intents: Bitwise::from(
+        Intent::GUILD_MESSAGES,
+        Intent::DIRECT_MESSAGES,
+        Intent::MESSAGE_CONTENT,
+        Intent::GUILDS
+      ),
+      buffer: new Multilayer([new FutureTickGuild(redis: $this->redis, instanceId: $this->instanceId, shardId: $this->shardId)])
+    )->withRest();
 
     $discord->gateway->shard(new Shard($this->shardId, $this->numShards));
 

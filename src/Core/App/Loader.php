@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Naneynonn;
+namespace Naneynonn\Core\App;
 
 use Ragnarok\Fenrir\Discord;
 use Ragnarok\Fenrir\Gateway\Events\Ready;
@@ -25,7 +25,6 @@ use Clue\React\Redis\RedisClient;
 use WyriHaximus\React\Cron;
 use WyriHaximus\React\Cron\Action;
 
-use function Naneynonn\isObjectEmpty;
 use function React\Promise\resolve;
 
 use DirectoryIterator;
@@ -56,7 +55,7 @@ class Loader
   private function setName(string $name): array
   {
     return [
-      'directory' => __DIR__ . "/{$name}",
+      'directory' => __DIR__ . "/../../{$name}",
       'namespace' => "\\Naneynonn\\{$name}\\"
     ];
   }
@@ -97,10 +96,9 @@ class Loader
       foreach ($attributes as $attribute) {
         $eventName = $attribute->newInstance()->eventName;
 
-        $instance = new $className($this);
-        $this->discord->gateway->events->on($eventName, static function (...$args) use ($instance) {
-          if (empty($args) || isObjectEmpty($args[0])) return;
-          $instance->handle(...$args);
+        $this->discord->gateway->events->on($eventName, function (...$args) use ($className) {
+          if (empty($args) || !isset($args[0])) return;
+          (new $className($this))->handle(...$args);
         });
 
         $loadedCount++;
@@ -128,8 +126,6 @@ class Loader
       $globalCommandAttributes = $reflection->getAttributes(Command::class);
       $globalCommandName = $globalCommandAttributes ? $globalCommandAttributes[0]->newInstance()->name : null;
 
-      $instance = new $className($this);
-
       $hasSubCommands = false;
 
       foreach ($reflection->getMethods() as $method) {
@@ -140,8 +136,8 @@ class Loader
           $eventName = $globalCommandName . '.' . $subCommandData->name;
           $methodName = $method->getName();
 
-          $commandExtension->on($eventName, static function (...$args) use ($instance, $methodName) {
-            $instance->$methodName(...$args);
+          $commandExtension->on($eventName, function (...$args) use ($className, $methodName) {
+            (new $className($this))->$methodName(...$args);
           });
 
           $loadedCount++;
@@ -150,9 +146,9 @@ class Loader
 
       // Для классов, представляющих одну глобальную команду без подкоманд
       if ($globalCommandName && !$hasSubCommands) {
-        $commandExtension->on($globalCommandName, static function (...$args) use ($instance) {
-          if (empty($args) || isObjectEmpty($args[0])) return;
-          $instance->handle(...$args); // Предполагается, что метод handle() существует для обработки команды
+        $commandExtension->on($globalCommandName, function (...$args) use ($className) {
+          if (empty($args) || !isset($args[0])) return;
+          (new $className($this))->handle(...$args); // Предполагается, что метод handle() существует для обработки команды
         });
 
         $loadedCount++;

@@ -19,7 +19,7 @@ use Ragnarok\Fenrir\Rest\Helpers\Channel\EmbedBuilder;
 
 use Naneynonn\Core\App\Buffer;
 
-use Naneynonn\Loader;
+use Naneynonn\Core\App\Loader;
 use Naneynonn\Memory;
 use Naneynonn\Language;
 
