@@ -4,72 +4,46 @@ declare(strict_types=1);
 
 namespace Naneynonn\Automod\Filter;
 
-use Ragnarok\Fenrir\Gateway\Events\MessageCreate;
-use Ragnarok\Fenrir\Gateway\Events\MessageUpdate;
-use Ragnarok\Fenrir\Parts\Message;
-use Ragnarok\Fenrir\Parts\Channel;
-use Ragnarok\Fenrir\Parts\GuildMember;
-
-use Naneynonn\Language;
 use React\Promise\PromiseInterface;
-use RuntimeException;
 
-use function React\Promise\reject;
 use function React\Promise\resolve;
 use function Naneynonn\getIgnoredPermissions;
 
-final class Caps
+final class Caps extends AbstractFilter
 {
-  private const TYPE = 'caps';
-
-  private Message|MessageCreate $message;
-  private Channel $channel;
-  private ?GuildMember $member;
-
-  private Language $lng;
-
-  private array $settings;
-  private array $perm;
-
-  public function __construct(Message|MessageCreate|MessageUpdate $message, Language $lng, array $settings, array $perm, Channel $channel, ?GuildMember $member)
-  {
-    $this->message = $message;
-
-    $this->settings = $settings;
-    $this->perm = $perm;
-    $this->lng = $lng;
-    $this->channel = $channel;
-    $this->member = $member;
-  }
+  protected const string TYPE = 'caps';
 
   public function process(): PromiseInterface
   {
-    if (!$this->settings['is_' . self::TYPE . '_status'] || mb_strlen($this->message->content) <= $this->settings[self::TYPE . '_start_length']) return reject($this->info(text: 'disable or len <= min'));
+    if (mb_strlen($this->message->content) <= $this->rule['options']['min_length'] || !$this->rule['is_enabled'] || $this->isIgnoredPerm()) {
+      return $this->sendReject(type: self::TYPE, text: 'Skipped');
+    }
 
     $percent = $this->getTextPercent(text: $this->message->content);
-    if ($percent < $this->settings[self::TYPE . '_percent']) return reject($this->info(text: 'no caps'));
-
-    // вынести getIgnoredPermissions в MessageProcessor
-    if (getIgnoredPermissions(perm: $this->perm, message: $this->message, member: $this->member, parent_id: $this->channel->parent_id, selection: self::TYPE)) {
-      return reject($this->info(text: 'ignored perm'));
-    }
+    if ($percent < $this->rule['options']['percent']) return $this->sendReject(type: self::TYPE, text: 'No Caps');
 
     return resolve([
       'module' => self::TYPE,
-      'logReason' => $this->lng->trans('embed.reason.abuse-caps', ['%percent%' => $this->settings[self::TYPE . '_percent']]),
+      'logReason' => $this->lng->trans('embed.reason.abuse-caps', ['%percent%' => $this->rule['options']['percent']]),
       'timeoutReason' => $this->lng->trans('embed.reason.caps'),
       'deleteReason' => $this->lng->trans('delete.' . self::TYPE)
     ]);
+  }
+
+  private function isIgnoredPerm(): bool
+  {
+    return getIgnoredPermissions(
+      perm: $this->permissions,
+      message: $this->message,
+      parent_id: $this->channel->parent_id,
+      member: $this->member,
+      selection: self::TYPE
+    );
   }
 
   private function getTextPercent(string $text): float
   {
     preg_match_all('/[А-ЯA-Z]/u', $text, $matches);
     return round(count($matches[0]) / mb_strlen($text) * 100, 2);
-  }
-
-  private function info(string $text): RuntimeException
-  {
-    return new RuntimeException(self::TYPE . ' | ' . $text);
   }
 }

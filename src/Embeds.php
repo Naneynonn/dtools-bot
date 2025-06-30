@@ -34,14 +34,14 @@ final class Embeds
     return hexdec(trim($color, '#'));
   }
 
-  public static function messageDelete(Discord $discord, Webhook $webhook, MessageCreate|Message $message, Language $lng, string $reason): void
+  public static function messageDelete(Discord $discord, Webhook $webhook, MessageCreate|Message $message, string $text, Language $lng, string $reason): void
   {
     $icon = 'https://media.discordapp.net/attachments/686585233339842572/708784170729472080/message_gray_minus_red.png';
     $color = 13974845;
 
     $channel = "<#{$message->channel_id}>";
     $author = '<@' . $message->author->id . '>';
-    $content = mb_strimwidth($message->content, 0, 1000, "...");
+    $content = mb_strimwidth($text, 0, 1000, "...");
 
     $discord->rest->webhook->execute(
       webhookId: $webhook->id,

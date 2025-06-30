@@ -4,59 +4,23 @@ declare(strict_types=1);
 
 namespace Naneynonn\Automod\Filter;
 
-use Ragnarok\Fenrir\Gateway\Events\MessageCreate;
-use Ragnarok\Fenrir\Gateway\Events\MessageUpdate;
-
-use Ragnarok\Fenrir\Parts\Message;
-use Ragnarok\Fenrir\Parts\Channel;
-use Ragnarok\Fenrir\Parts\GuildMember;
-
 use React\Promise\PromiseInterface;
-use Naneynonn\Language;
-use RuntimeException;
 
-use function React\Promise\reject;
 use function React\Promise\resolve;
 use function Naneynonn\getIgnoredPermissions;
 
-final class Zalgo
+final class Zalgo extends AbstractFilter
 {
-  private const TYPE = 'zalgo';
-
-  private Message|MessageCreate $message;
-  private Channel $channel;
-  private ?GuildMember $member;
-
-  private Language $lng;
-
-  private array $settings;
-  private array $perm;
-
-  public function __construct(Message|MessageCreate|MessageUpdate $message, Language $lng, array $settings, array $perm, Channel $channel, ?GuildMember $member)
-  {
-    $this->message = $message;
-
-    $this->settings = $settings;
-    $this->perm = $perm;
-    $this->lng = $lng;
-    $this->channel = $channel;
-    $this->member = $member;
-  }
+  protected const string TYPE = 'zalgo';
 
   public function process(): PromiseInterface
   {
-    if (!$this->settings['is_' . self::TYPE . '_status']) return reject($this->info(text: 'disable'));
+    if (!$this->rule['is_enabled'] || $this->isIgnoredPerm()) {
+      return $this->sendReject(type: self::TYPE, text: 'Skipped');
+    }
 
     $zalgo = $this->isZalgo(text: $this->message->content);
-    if (!$zalgo) return reject($this->info(text: 'no zalgo'));
-
-    // $percent = $this->getTextPercent(text: $this->message->content);
-    // if ($percent < $this->settings[self::TYPE . '_percent']) return reject('percent zadelo');
-
-    // вынести getIgnoredPermissions в MessageProcessor
-    if (getIgnoredPermissions(perm: $this->perm, message: $this->message, member: $this->member, parent_id: $this->channel->parent_id, selection: self::TYPE)) {
-      return reject($this->info(text: 'ignored perm'));
-    }
+    if (!$zalgo) return $this->sendReject(type: self::TYPE, text: 'No Zalgo');
 
     return resolve([
       'module' => self::TYPE,
@@ -64,6 +28,17 @@ final class Zalgo
       'timeoutReason' => $this->lng->trans('embed.reason.zalgo-text'),
       'deleteReason' => $this->lng->trans('delete.' . self::TYPE)
     ]);
+  }
+
+  private function isIgnoredPerm(): bool
+  {
+    return getIgnoredPermissions(
+      perm: $this->permissions,
+      message: $this->message,
+      parent_id: $this->channel->parent_id,
+      member: $this->member,
+      selection: self::TYPE
+    );
   }
 
   private function isZalgo(string $text): bool
@@ -88,10 +63,5 @@ final class Zalgo
 
     // Если залго текста нет или он является частью эмодзи, то возвращаем false
     return false;
-  }
-
-  private function info(string $text): RuntimeException
-  {
-    return new RuntimeException(self::TYPE . ' | ' . $text);
   }
 }

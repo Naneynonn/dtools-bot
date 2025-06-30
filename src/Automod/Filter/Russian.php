@@ -4,56 +4,23 @@ declare(strict_types=1);
 
 namespace Naneynonn\Automod\Filter;
 
-use Ragnarok\Fenrir\Gateway\Events\MessageCreate;
-use Ragnarok\Fenrir\Gateway\Events\MessageUpdate;
-
-use Ragnarok\Fenrir\Parts\Message;
-use Ragnarok\Fenrir\Parts\Channel;
-use Ragnarok\Fenrir\Parts\GuildMember;
-
 use React\Promise\PromiseInterface;
-use Naneynonn\Language;
-use RuntimeException;
 
-use function React\Promise\reject;
 use function React\Promise\resolve;
 use function Naneynonn\getIgnoredPermissions;
 
-final class Russian
+final class Russian extends AbstractFilter
 {
-  private const TYPE = 'russian';
-
-  private Message|MessageCreate $message;
-  private Channel $channel;
-  private ?GuildMember $member;
-
-  private Language $lng;
-
-  private array $settings;
-  private array $perm;
-
-  public function __construct(Message|MessageCreate|MessageUpdate $message, Language $lng, array $settings, array $perm, Channel $channel, ?GuildMember $member)
-  {
-    $this->message = $message;
-
-    $this->settings = $settings;
-    $this->perm = $perm;
-    $this->lng = $lng;
-    $this->channel = $channel;
-    $this->member = $member;
-  }
+  protected const string TYPE = 'russian';
 
   public function process(): PromiseInterface
   {
-    if (!$this->settings['is_' . self::TYPE . '_status']) return reject($this->info(text: 'disable'));
+    if (!$this->rule['is_enabled'] || $this->isIgnoredPerm()) {
+      return $this->sendReject(type: self::TYPE, text: 'Skipped');
+    }
 
     $check = $this->checkIfRussian(sentence: $this->message->content);
-    if (!$check) return reject($this->info(text: 'no russian'));
-
-    // вынести getIgnoredPermissions в MessageProcessor
-    if (getIgnoredPermissions(perm: $this->perm, message: $this->message, member: $this->member, parent_id: $this->channel->parent_id, selection: self::TYPE)) {
-      return reject($this->info(text: 'ignored perm'));
-    }
+    if (!$check) return $this->sendReject(type: self::TYPE, text: 'No Russian');
 
     return resolve([
       'module' => self::TYPE,
@@ -61,6 +28,17 @@ final class Russian
       'timeoutReason' => $this->lng->trans('embed.reason.russian'),
       'deleteReason' => $this->lng->trans('delete.' . self::TYPE)
     ]);
+  }
+
+  private function isIgnoredPerm(): bool
+  {
+    return getIgnoredPermissions(
+      perm: $this->permissions,
+      message: $this->message,
+      parent_id: $this->channel->parent_id,
+      member: $this->member,
+      selection: self::TYPE
+    );
   }
 
   private function checkIfRussian(string $sentence): bool
@@ -85,10 +63,5 @@ final class Russian
 
     // Если не нашли ни одной уникальной буквы - считаем предложение русским
     return false;
-  }
-
-  private function info(string $text): RuntimeException
-  {
-    return new RuntimeException(self::TYPE . ' | ' . $text);
   }
 }

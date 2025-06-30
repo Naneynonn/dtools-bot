@@ -4,239 +4,338 @@ declare(strict_types=1);
 
 namespace Naneynonn\Automod\Filter;
 
-use React\Promise\PromiseInterface;
-
-use Ragnarok\Fenrir\Gateway\Events\MessageCreate;
-use Ragnarok\Fenrir\Gateway\Events\MessageUpdate;
-use Ragnarok\Fenrir\Parts\Message;
-use Ragnarok\Fenrir\Parts\Channel;
-use Ragnarok\Fenrir\Parts\GuildMember;
-
-use Naneynonn\Language;
-use Naneynonn\Model;
 use Naneynonn\Config;
+
+use React\Promise\PromiseInterface;
+use React\Http\Browser;
+use thiagoalessio\TesseractOCR\TesseractOCR;
 
 use React\Filesystem\Factory;
 use React\Filesystem\AdapterInterface;
-use React\Http\Browser;
 
-use Clue\React\Redis\RedisClient;
-use thiagoalessio\TesseractOCR\TesseractOCR;
-
-use Imagick;
 use Throwable;
-use RuntimeException;
+use Imagick;
 
 use function React\Async\await;
-use function React\Promise\reject;
 use function React\Promise\resolve;
-
 use function Naneynonn\getIgnoredPermissions;
 
-final class BadWords
+final class Badwords extends AbstractFilter
 {
   use Config;
 
-  private const TYPE = 'badwords';
+  protected const string TYPE                   = 'badwords';
 
-  private Message|MessageCreate|MessageUpdate $message;
-  private Channel $channel;
-  private ?GuildMember $member;
+  // Redis
+  private const int     EXPIRATION_SECONDS      = 90;
+  private const int     MAX_GLOBAL_MESSAGES     = 10;
+  private const int     MAX_USER_MESSAGES       = 20;
+  private const int     MIN_WORD_COUNT          = 3;
+  private const int     MAX_MESSAGE_LENGTH      = 75;
+  private const string  KEY_PREFIX              = 'messages:badwords';
 
-  private Language $lng;
-  private Model $model;
-  private RedisClient $redis;
+  // Badwords API
+  private const string  API_URL                 = 'https://api.discord.band/v1/badwords';
+  private const string  API_USER_AGENT          = 'DTools-Bot/1.0 (+https://discordtools.cc)';
+  private const string  API_CONTENT_TYPE        = 'application/json';
+  private const int     BADWORDS_TYPE_TEXT      = 1;
 
-  private array $settings;
-  private array $perm;
+  // OCR
+  private const array   OCR_PSM_MODES           = [3, 6, 4, 7];
+  private const string  OCR_LANGUAGES           = 'rus+ukr+eng';
+  private const string  TEMP_PREFIX_IMAGE       = 'img_';
+  private const string  TEMP_PREFIX_PROCESSED   = 'processed_';
 
-  public function __construct(Message|MessageCreate|MessageUpdate $message, Language $lng, array $settings, array $perm, Model $model, Channel $channel, ?GuildMember $member, RedisClient $redis)
+  public function process(): PromiseInterface
   {
-    $this->message = $message;
+    if (!$this->rule['is_enabled'] || $this->isIgnoredPerm()) {
+      return $this->sendReject(type: self::TYPE, text: 'Skipped');
+    }
 
-    $this->settings = $settings;
-    $this->perm = $perm;
-    $this->lng = $lng;
-    $this->model = $model;
-    $this->channel = $channel;
-    $this->member = $member;
+    if (empty($this->message->content)) return $this->sendReject(type: self::TYPE, text: "No text content");
 
-    $this->redis = $redis;
+    return $this->analyzeText($this->message->content, 'Initial');
   }
 
-  // TODO: Вынести как общий метод
-  private function isModuleDisabled(): bool
+  public function filters(): array
   {
-    return !$this->settings['is_' . self::TYPE . '_status'];
+    return [
+      'main' => [
+        fn() => $this->processLazyWords(),
+        fn() => $this->processLazyGlobalWords(),
+        fn() => $this->processStickers(),
+      ],
+      'fallback' => [
+        fn() => $this->processImage(),
+      ]
+    ];
   }
 
-  // TODO: Вынести как общий метод
   private function isPremium(): bool
   {
     return $this->settings['premium'] >= gmdate('Y-m-d H:i:s.u');
   }
 
-  // TODO: Вынести как общий метод
-  private function isIgnoredPerm(): bool
-  {
-    return getIgnoredPermissions(perm: $this->perm, message: $this->message, member: $this->member, parent_id: $this->channel->parent_id, selection: self::TYPE);
-  }
-
-  // TODO: Вынести как общий метод
-  private function sendReject(string $text): PromiseInterface
-  {
-    return reject(new RuntimeException(ucfirst(self::TYPE) . ' | ' . $text));
-  }
-
-  public function process(): PromiseInterface
-  {
-    if ($this->isModuleDisabled()) return $this->sendReject(text: 'Disabled');
-
-    $skip = $this->getSkipWords();
-
-    $badword_check = $this->fetchBadWords(message: $this->message->content, skip: $skip, skipTypes: $this->settings['badwords_exclusion_flags']);
-    if (!isset($badword_check['badwords'])) return $this->sendReject(text: 'Err API');
-    if (!$badword_check['badwords']) return $this->sendReject(text: 'No Badwords');
-
-    $reason = $this->lng->trans('embed.reason.foul-lang');
-    $reason_del = $this->lng->trans('delete.badwords.foul');
-    if (!is_null($badword_check['bad_type'])) {
-      $reason_list = $this->decodeConditions(bitfield: $badword_check['bad_type']);
-      $reason = $reason_list['list'];
-      $reason_del = $reason_list['message'];
-    }
-
-    if ($this->isIgnoredPerm()) return $this->sendReject(text: 'Ignored Perm');
-
-    return resolve([
-      'module' => self::TYPE,
-      'logReason' => $reason,
-      'timeoutReason' => $reason,
-      'deleteReason' => $reason_del
-    ]);
-  }
-
-  // TODO: проверять будет каждый стикер и вызывать
-  public function processStickers(object $sticker): PromiseInterface
-  {
-    if ($this->isModuleDisabled()) return $this->sendReject(text: 'Disabled');
-
-    $skip = $this->getSkipWords();
-
-    $badword_check = $this->fetchBadWords(message: $sticker->name, skip: $skip, skipTypes: $this->settings['badwords_exclusion_flags']);
-    if (!isset($badword_check['badwords'])) return $this->sendReject(text: 'Err API');
-    if (!$badword_check['badwords']) return $this->sendReject(text: 'No Badwords');
-
-    $reason = $this->lng->trans('embed.reason.foul-lang');
-    $reason_del = $this->lng->trans('delete.badwords.foul');
-    if (!is_null($badword_check['bad_type'])) {
-      $reason_list = $this->decodeConditions(bitfield: $badword_check['bad_type']);
-      $reason = $reason_list['list'];
-      $reason_del = $reason_list['message'];
-    }
-
-    if ($this->isIgnoredPerm()) return $this->sendReject(text: 'Ignored Perm');
-
-    return resolve([
-      'module' => self::TYPE,
-      'logReason' => $reason,
-      'timeoutReason' => $reason,
-      'deleteReason' => $reason_del,
-      'message' => $this->lng->trans('embed.sticker-name', ['%sticker%' => $sticker->name]),
-      'type' => 'sticker'
-    ]);
-  }
-
-  // TODO Принимает по 1 слову и проверяет
   public function processLazyWords(): PromiseInterface
   {
-    $msg_premium = '';
-
-    if ($this->isModuleDisabled()) return $this->sendReject(text: 'Disabled');
-    if (!$this->isPremium()) return $this->sendReject(text: 'No Premium');
-
-    $skip = $this->getSkipWords();
-
-    $this->addMessageInRedis(message: $this->message->content);
-
-    $wordsData = $this->getWordsData();
-    $msg_premium = $this->getAllWordsAsString(data: $wordsData); // Выведет составленное сообщение из слов
-    if (empty($msg_premium)) return $this->sendReject(text: 'No Words');
-
-    $msg_ids = $this->getMessageIds(data: $wordsData);
-
-    $badword_check = $this->fetchBadWords(message: $msg_premium, skip: $skip, skipTypes: $this->settings['badwords_exclusion_flags']);
-    if (!isset($badword_check['badwords'])) return $this->sendReject(text: 'Err API');
-    if (!$badword_check['badwords']) return $this->sendReject(text: 'No Badwords');
-
-    $reason = $this->lng->trans('embed.reason.foul-lang');
-    $reason_del = $this->lng->trans('delete.badwords.foul');
-    if (!is_null($badword_check['bad_type'])) {
-      $reason_list = $this->decodeConditions(bitfield: $badword_check['bad_type']);
-      $reason = $reason_list['list'];
-      $reason_del = $reason_list['message'];
-    }
-
-    // очищаем если что-то нашло
-    $this->clearAllWords();
-
-    if ($this->isIgnoredPerm()) return $this->sendReject(text: 'Ignored Perm');
-
-    $result = [
-      'module' => self::TYPE,
-      'logReason' => $reason,
-      'timeoutReason' => $reason,
-      'deleteReason' => $reason_del,
-      'type' => 'lazy',
-      'isLazy' => true
-    ];
-
-    // Добавляем 'lazy', если $msg_premium не пуст
-    if (!empty($msg_premium)) {
-      $result['lazyIds'] = $msg_ids;
-      $result['message'] = $msg_premium;
-    }
-
-    return resolve($result);
+    return $this->processLazy(isGlobal: false, label: 'Lazy Words');
   }
 
-  public function processImage(string $url): PromiseInterface
+  public function processLazyGlobalWords(): PromiseInterface
   {
-    if ($this->isModuleDisabled()) return $this->sendReject(text: 'Disabled');
-    if (!$this->isPremium()) return $this->sendReject(text: 'No Premium');
+    return $this->processLazy(isGlobal: true, label: 'Lazy Global Words');
+  }
 
-    $skip = $this->getSkipWords();
-
-    $text = $this->extractTextFromImage(url: $url);
-    if (empty($text)) return $this->sendReject(text: 'No image text');
-
-    $badword_check = $this->fetchBadWords(message: $text, skip: $skip, skipTypes: $this->settings['badwords_exclusion_flags']);
-    if (!isset($badword_check['badwords'])) return $this->sendReject(text: 'Err API');
-    if (!$badword_check['badwords']) return $this->sendReject(text: 'No Badwords');
-
-    $reason = $this->lng->trans('embed.reason.foul-lang');
-    $reason_del = $this->lng->trans('delete.badwords.foul');
-    if (!is_null($badword_check['bad_type'])) {
-      $reason_list = $this->decodeConditions(bitfield: $badword_check['bad_type']);
-      $reason = $reason_list['list'];
-      $reason_del = $reason_list['message'];
+  private function processLazy(bool $isGlobal, string $label): PromiseInterface
+  {
+    if (!$this->isPremium() || !$this->rule['is_enabled'] || $this->isIgnoredPerm()) {
+      return $this->sendReject(type: self::TYPE, text: "Skipped {$label}");
     }
 
-    if ($this->isIgnoredPerm()) return $this->sendReject(text: 'Ignored Perm');
+    $this->addMessageInRedis($this->message->content, $isGlobal);
+    $data = $this->getWordsData($isGlobal);
+    $text = $this->getAllWordsAsString($data);
+
+    if (empty($text)) return $this->sendReject(type: self::TYPE, text: "No {$label} Text");
+
+    return $this->analyzeText(
+      message: $text,
+      label: $label,
+      isLazy: true,
+      lazyIds: $this->getMessageIds($data),
+      isGlobal: $isGlobal
+    );
+  }
+
+  public function processStickers(): PromiseInterface
+  {
+    if (!$this->rule['is_enabled'] || $this->isIgnoredPerm()) {
+      return $this->sendReject(type: self::TYPE, text: 'Skipped Stickers');
+    }
+
+    foreach ($this->message->sticker_items ?? [] as $sticker) {
+      $text = $this->lng->trans('embed.sticker-name', ['%sticker%' => $sticker->name]) ?? '';
+      if (!empty($text)) {
+        return $this->analyzeText($text, 'sticker');
+      }
+    }
+
+    return $this->sendReject(type: self::TYPE, text: 'No Sticker Match');
+  }
+
+  public function processImage(): PromiseInterface
+  {
+    if (!$this->isPremium() || !$this->rule['is_enabled'] || $this->isIgnoredPerm()) {
+      return $this->sendReject(type: self::TYPE, text: 'Skipped Images');
+    }
+
+    if (!empty($this->message->attachments)) {
+      foreach ($this->message->attachments as $attachment) {
+        $text = $this->extractTextFromImage($attachment->url ?? '');
+        if (!empty($text)) {
+          return $this->analyzeText($text, 'Image');
+        }
+      }
+    }
+
+    if (!empty($this->message->embeds)) {
+      foreach ($this->message->embeds as $embed) {
+        $text = $this->extractTextFromImage($embed->thumbnail->url ?? '');
+        if (!empty($text)) {
+          return $this->analyzeText($text, 'Image');
+        }
+      }
+    }
+
+    return $this->sendReject(type: self::TYPE, text: 'No Image Match');
+  }
+
+  private function analyzeText(string $message, string $label, bool $isLazy = false, array $lazyIds = [], bool $isGlobal = false): PromiseInterface
+  {
+    $result = $this->fetchBadWords(
+      message: $message,
+      skip: $this->getSkipWords(),
+      skipTypes: $this->rule['options']['exclusion_flags'] ?? 0
+    );
+
+    if (!isset($result['badwords']) || !$result['badwords']) {
+      return $this->sendReject(type: self::TYPE, text: "No Badwords in $label");
+    }
+
+    if ($isLazy) $this->clearAllWords($isGlobal);
+
+    [$reason, $reasonDel] = $this->resolveReason($result);
 
     return resolve([
       'module' => self::TYPE,
       'logReason' => $reason,
       'timeoutReason' => $reason,
-      'deleteReason' => $reason_del,
-      'message' => $badword_check['message'],
-      'type' => 'image'
+      'deleteReason' => $reasonDel,
+      'type' => strtolower($label),
+      'isLazy' => $isLazy,
+      'lazyIds' => $lazyIds,
+      'message' => trim($result['message'] ?? $message)
     ]);
+  }
+
+  private function getMessageIds(array $data): array
+  {
+    return array_map(static fn($json) => json_decode($json, true)['id'], $data);
+  }
+
+  private function getAllWordsAsString(array $data): string
+  {
+    return implode(' ', array_map(static fn($json) => json_decode($json, true)['message'], $data));
+  }
+
+  private function getWordsData(bool $isGlobal = false): array
+  {
+    $key = $this->getRedisKey($isGlobal);
+    return await($this->redis->lrange($key, 0, -1)) ?? [];
+  }
+
+  private function addMessageInRedis(string $message, bool $isGlobal = false): void
+  {
+    if (mb_strlen($message) > self::MAX_MESSAGE_LENGTH && substr_count($message, ' ') > self::MIN_WORD_COUNT) return;
+
+    $key = $this->getRedisKey($isGlobal);
+
+    if (await($this->redis->llen($key)) > ($isGlobal ? self::MAX_GLOBAL_MESSAGES : self::MAX_USER_MESSAGES)) $this->redis->lpop($key);
+
+    $this->redis->rpush($key, json_encode(['message' => $message, 'id' => $this->message->id]));
+    $this->redis->expire($key, self::EXPIRATION_SECONDS);
+  }
+
+  private function clearAllWords(bool $isGlobal = false): void
+  {
+    $this->redis->del($this->getRedisKey($isGlobal));
+  }
+
+  private function getRedisKey(bool $isGlobal): string
+  {
+    $base = self::KEY_PREFIX . ":{$this->channel->guild_id}:{$this->message->channel_id}";
+    return $isGlobal
+      ? $base
+      : "{$base}:{$this->message->author->id}";
+  }
+
+  private function fetchBadWords(string $message, string $skip, ?int $skipTypes = null): ?array
+  {
+    $client = new Browser();
+    $body = json_encode([
+      'message' => $message,
+      'type' => self::BADWORDS_TYPE_TEXT,
+      'skip' => $skip,
+      'skipTypes' => $skipTypes
+    ], JSON_UNESCAPED_UNICODE);
+
+    try {
+      $response = await($client->post(
+        self::API_URL,
+        [
+          'Content-Type' => self::API_CONTENT_TYPE,
+          'Authorization' => 'Bearer ' . self::API_TOKEN,
+          'User-Agent' => self::API_USER_AGENT
+        ],
+        $body
+      ));
+
+      return json_decode((string) $response->getBody(), true);
+    } catch (Throwable $e) {
+      echo 'Badwords fetch error: ' . $e->getMessage() . PHP_EOL;
+      return null;
+    }
+  }
+
+  private function resolveReason(array $result): array
+  {
+    $lng = $this->lng;
+
+    if (!is_null($result['bad_type'])) {
+      $decoded = $this->decodeConditions($result['bad_type']);
+      return [$decoded['list'], $decoded['message']];
+    }
+
+    return [
+      $lng->trans('embed.reason.foul-lang'),
+      $lng->trans('delete.badwords.foul')
+    ];
+  }
+
+  private function decodeConditions(int $bitfield): array
+  {
+    $lng = $this->lng;
+
+    $map = [
+      1   => ['foul-lang', 'foul'],
+      2   => ['insults', 'insults'],
+      4   => ['toxicity', 'toxicity'],
+      8   => ['suicide', 'suicide'],
+      16  => ['politics', 'politics'],
+      32  => ['inadequacy', 'inadequacy'],
+      64  => ['threats', 'threats'],
+      128 => ['forbidden', 'forbidden'],
+    ];
+
+    $reasons = [];
+    $messages = [];
+
+    foreach ($map as $flag => [$key, $msg]) {
+      if ($bitfield & $flag) {
+        $reasons[] = $lng->trans("embed.reason.{$key}");
+        $messages[] = $lng->trans("delete.badwords.{$msg}");
+      }
+    }
+
+    return [
+      'list' => implode(', ', $reasons),
+      'message' => $messages[0] ?? $lng->trans('delete.badwords.foul')
+    ];
+  }
+
+  private function getSkipWords(): string
+  {
+    $skip = $this->model->getBadWordsExeption($this->channel->guild_id);
+    return empty($skip) ? '' : implode(', ', array_column($skip, 'word'));
+  }
+
+  private function isIgnoredPerm(): bool
+  {
+    return getIgnoredPermissions(
+      perm: $this->permissions,
+      message: $this->message,
+      parent_id: $this->channel->parent_id,
+      member: $this->member,
+      selection: self::TYPE
+    );
+  }
+
+  private function extractTextFromImage(string $url): string
+  {
+    $filesystem = Factory::create();
+
+    $imagePath = $this->downloadImage($url, $filesystem);
+    if (empty($imagePath)) {
+      return '';
+    }
+
+    $processedImagePath = $this->preprocessImage($imagePath);
+    $text = $this->recognizeText($processedImagePath);
+    // print_r($text);
+
+    if (file_exists($imagePath)) {
+      unlink($imagePath);
+    }
+    if (file_exists($processedImagePath)) {
+      unlink($processedImagePath);
+    }
+
+    return $text;
   }
 
   private function downloadImage(string $url, AdapterInterface $filesystem): string
   {
-    $path = tempnam(sys_get_temp_dir(), 'img_') . '.png';
+    $path = tempnam(sys_get_temp_dir(), self::TEMP_PREFIX_IMAGE) . '.png';
     $client = new Browser();
 
     try {
@@ -247,25 +346,6 @@ final class BadWords
       echo 'Err fetch bw: ' .  $e->getMessage(), PHP_EOL;
       return '';
     }
-  }
-
-  private function recognizeText(string $path): string
-  {
-    $psms = [3, 6, 4, 7]; // Начальный и резервные режимы PSM
-
-    foreach ($psms as $psm) {
-      try {
-        $text = (new TesseractOCR($path))->lang('rus+ukr+eng')->psm($psm)->run();
-        if (!empty($text)) {
-          return $text;
-        }
-      } catch (\Throwable $th) {
-        // echo 'Err recognize text with PSM ' . $psm . ': ' . $th->getMessage(), PHP_EOL;
-      }
-    }
-
-    // echo 'Err: Tesseract did not produce any output with any PSM.' . PHP_EOL;
-    return '';
   }
 
   private function preprocessImage(string $path): string
@@ -294,7 +374,7 @@ final class BadWords
     // $image->contrastImage(true);
 
     // Сохранение обработанного изображения во временный файл
-    $processedPath = tempnam(sys_get_temp_dir(), 'processed_') . '.png';
+    $processedPath = tempnam(sys_get_temp_dir(), self::TEMP_PREFIX_PROCESSED) . '.png';
     $image->writeImage($processedPath);
 
     // Дополнительное сохранение обработанного изображения для отладки
@@ -306,170 +386,18 @@ final class BadWords
     return $processedPath;
   }
 
-  private function extractTextFromImage(string $url): string
+  private function recognizeText(string $path): string
   {
-    $filesystem = Factory::create();
-
-    $imagePath = $this->downloadImage($url, $filesystem);
-    if (empty($imagePath)) {
-      return '';
-    }
-
-    $processedImagePath = $this->preprocessImage($imagePath);
-    $text = $this->recognizeText($processedImagePath);
-    // print_r($text);
-
-    if (file_exists($imagePath)) {
-      unlink($imagePath);
-    }
-    if (file_exists($processedImagePath)) {
-      unlink($processedImagePath);
-    }
-
-    return $text;
-  }
-
-  // Добавляет одно слово в Redis с уникальным ключом, включающим messageId
-  private function addMessageInRedis(string $message): void
-  {
-    $listKey = "messages:{$this->channel->guild_id}:{$this->message->channel_id}";
-
-    if (mb_strlen($message) > 75 && substr_count($message, ' ') > 3) {
-      return; // Игнорирование, если условия не выполняются
-    }
-
-    // Проверка общего количества слов
-    if (await($this->redis->llen($listKey)) > 10) {
-      $this->redis->lpop($listKey); // Удаление первого элемента списка, если слов больше 10
-    }
-
-    // Создание JSON-объекта с word и message_id
-    $wordData = json_encode([
-      'message' => $message,
-      'id' => $this->message->id
-    ]);
-
-    $this->redis->rpush($listKey, $wordData); // Добавление JSON-строки в конец списка
-    $this->redis->expire($listKey, 30); // Установка TTL для списка
-  }
-
-  private function getWordsData(): array
-  {
-    $listKey = "messages:{$this->channel->guild_id}:{$this->message->channel_id}";
-    $wordsData = await($this->redis->lrange($listKey, 0, -1));
-
-    if (empty($wordsData) || !is_array($wordsData)) {
-      return [];
-    }
-
-    return $wordsData;
-  }
-
-  // Возвращает все слова в виде строки для указанного guildId и channelId
-  public function getAllWordsAsString(array $data): string
-  {
-    if (empty($data)) {
-      return '';
-    }
-
-    foreach ($data as $wordData) {
-      $data = json_decode($wordData, true);
-      $words[] = $data['message'];
-    }
-
-    return implode(' ', $words); // Соединение слов в одну строку
-  }
-
-  private function clearAllWords(): void
-  {
-    $listKey = "messages:{$this->channel->guild_id}:{$this->message->channel_id}";
-    $this->redis->del($listKey);
-  }
-
-  public function getMessageIds(array $data): array
-  {
-    if (empty($data)) {
-      return [];
-    }
-
-    $messageIds = [];
-    foreach ($data as $wordData) {
-      $data = json_decode($wordData, true);
-      $messageIds[] = $data['id'];
-    }
-
-    return $messageIds;
-  }
-
-  private function getSkipWords(): string
-  {
-    $skip = $this->model->getBadWordsExeption(id: $this->channel->guild_id);
-    return $this->skipWords(skip: $skip);
-  }
-
-  private function skipWords(array $skip): string
-  {
-    if (!$skip) $skip = '';
-    else $skip = implode(', ', array_map(static function ($entry) {
-      return $entry['word'];
-    }, $skip));
-
-    return $skip;
-  }
-
-  private function fetchBadWords(string $message, string $skip, ?int $skipTypes = null): ?array
-  {
-    $client = new Browser();
-
-    $url = 'https://api.discord.band/v1/badwords';
-    $body = json_encode([
-      "message" => $message,
-      "type" => 1,
-      "skip" => $skip,
-      "skipTypes" => $skipTypes
-    ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-    $headers = [
-      'Content-Type' => 'application/json',
-      'Authorization' => 'Bearer ' . self::API_TOKEN,
-      'User-Agent' => 'DTools-Bot/1.0 (+https://discordtools.cc)'
-    ];
-
-    try {
-      $response = await($client->post(url: $url, headers: $headers, body: $body));
-    } catch (Throwable $e) {
-      echo 'Err fetch bw: ' .  $e->getMessage(), PHP_EOL;
-      return null;
-    }
-
-    return json_decode((string) $response->getBody(), true);
-  }
-
-  private function decodeConditions(int $bitfield): array
-  {
-    $conditions = [
-      1 => [$this->lng->trans('embed.reason.foul-lang'), $this->lng->trans('delete.badwords.foul')],
-      2 => [$this->lng->trans('embed.reason.insults'), $this->lng->trans('delete.badwords.insults')],
-      4 => [$this->lng->trans('embed.reason.toxicity'), $this->lng->trans('delete.badwords.toxicity')],
-      8 => [$this->lng->trans('embed.reason.suicide'), $this->lng->trans('delete.badwords.suicide')],
-      16 => [$this->lng->trans('embed.reason.politics'), $this->lng->trans('delete.badwords.politics')],
-      32 => [$this->lng->trans('embed.reason.inadequacy'), $this->lng->trans('delete.badwords.inadequacy')],
-      64 => [$this->lng->trans('embed.reason.threats'), $this->lng->trans('delete.badwords.threats')],
-      128 => [$this->lng->trans('embed.reason.forbidden'), $this->lng->trans('delete.badwords.forbidden')]
-    ];
-
-    $resultNames = [];
-    $resultMessages = [];
-
-    foreach ($conditions as $value => $namesAndMessages) {
-      if ($bitfield & $value) {
-        $resultNames[] = $namesAndMessages[0];
-        $resultMessages[] = $namesAndMessages[1];
+    foreach (self::OCR_PSM_MODES as $psm) {
+      try {
+        $text = (new TesseractOCR($path))->lang(self::OCR_LANGUAGES)->psm($psm)->run();
+        if (!empty($text)) return $text;
+      } catch (\Throwable $th) {
+        // echo 'Err recognize text with PSM ' . $psm . ': ' . $th->getMessage(), PHP_EOL;
       }
     }
 
-    return [
-      'list' => implode(', ', $resultNames),
-      'message' => $resultMessages[0],
-    ];
+    // echo 'Err: Tesseract did not produce any output with any PSM.' . PHP_EOL;
+    return '';
   }
 }

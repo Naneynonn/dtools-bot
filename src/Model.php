@@ -14,7 +14,11 @@ class Model
 
   public function __construct()
   {
-    $this->db = new PDO('pgsql:host=' . self::DB_HOST . ';port=5432;dbname=' . self::DB_NAME, self::DB_USER, self::DB_PASS);
+    $this->db = new PDO('pgsql:host=' . self::DB_HOST . ';port=5432;dbname=' . self::DB_NAME, self::DB_USER, self::DB_PASS, [
+      PDO::ATTR_PERSISTENT => true,
+      PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+      PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    ]);
   }
 
   public function close(): void
@@ -23,12 +27,20 @@ class Model
     unset($this->db);
   }
 
-  public function getSettingsServer(string $id): array|false
+  public function getSettingsServer(string $guild_id): array|false
   {
     $sql = $this->db->prepare("SELECT * FROM settings_automod a LEFT JOIN servers s ON a.server_id = s.server_id WHERE a.server_id = ?");
-    $sql->execute([$id]);
+    $sql->execute([$guild_id]);
 
     return $sql->fetch();
+  }
+
+  public function getAutomodSettings(string $guild_id): array|false
+  {
+    $sql = $this->db->prepare("SELECT * FROM automod_rules WHERE server_id = ? AND is_enabled");
+    $sql->execute([$guild_id]);
+
+    return $sql->fetchAll();
   }
 
   public function getBadWordsExeption(string $id): array|false
@@ -105,10 +117,16 @@ class Model
 
   public function automodToggleCommands(string $server_id, bool $is_enable, string $type): void
   {
-    $sql = $this->db->prepare("UPDATE settings_automod SET is_{$type}_status = :is_enable WHERE server_id = :server_id");
+    $sql = $this->db->prepare("
+          INSERT INTO automod_rules (server_id, type, is_enabled)
+          VALUES (:server_id, :type, :is_enabled)
+          ON CONFLICT (server_id, type)
+          DO UPDATE SET is_enabled = EXCLUDED.is_enabled
+      ");
 
     $sql->bindValue(':server_id', $server_id, PDO::PARAM_STR);
-    $sql->bindValue(':is_enable', $is_enable, PDO::PARAM_BOOL);
+    $sql->bindValue(':type', $type, PDO::PARAM_STR);
+    $sql->bindValue(':is_enabled', (int)$is_enable, PDO::PARAM_INT);
 
     $sql->execute();
   }

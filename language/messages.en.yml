@@ -34,6 +34,7 @@ delete:
   zalgo: "%name%, Don't use zalgo text (unreadable characters)!"
   duplicate: "%name%, Don't use so many of the same words/symbols!"
   russian: "%name%, Don't use Russian!"
+  invite: "%name%, Don't post invite links!"
 
 embed:
   message:
@@ -57,6 +58,7 @@ embed:
     duplicate: Duplicate characters
     russian: Russian language
     caps: Abuse of caps
+    invite: Invite
   user:
     id: User ID
     mute: User is punished

@@ -93,22 +93,6 @@ function getOneWebhook(array $webhooks): Webhook|false
   return $wh;
 }
 
-function outputString(array $settings, string $module, Message|MessageCreate|MessageUpdate $message, string $reason): string
-{
-  $date = gmdate('Y-m-d H:i:s.u');
-  $text = $settings[$module . '_delete_text'];
-  $replacePairs = [
-    "{user}" => '%name%'
-  ];
-  $user_id = '<@' . $message->author->id . '>';
-
-  if ($settings['premium'] >= $date && !empty($text)) {
-    $reason = str_replace(array_keys($replacePairs), array_values($replacePairs), $text);
-  }
-
-  return str_replace('%name%', $user_id, $reason);
-}
-
 function hasPermission(int $bitmask, Permission $permission): bool
 {
   return ($bitmask & $permission->value) === $permission->value;

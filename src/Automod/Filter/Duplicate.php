@@ -4,63 +4,84 @@ declare(strict_types=1);
 
 namespace Naneynonn\Automod\Filter;
 
-use Ragnarok\Fenrir\Gateway\Events\MessageCreate;
-use Ragnarok\Fenrir\Gateway\Events\MessageUpdate;
-
-use Ragnarok\Fenrir\Parts\Message;
-use Ragnarok\Fenrir\Parts\Channel;
-use Ragnarok\Fenrir\Parts\GuildMember;
-
 use React\Promise\PromiseInterface;
-use Naneynonn\Language;
-use RuntimeException;
 
-use function React\Promise\reject;
 use function React\Promise\resolve;
+use function React\Async\await;
 use function Naneynonn\getIgnoredPermissions;
 
-final class Duplicate
+final class Duplicate extends AbstractFilter
 {
-  private const TYPE = 'duplicate';
+  protected const string TYPE                   = 'duplicate';
 
-  private Message|MessageCreate $message;
-  private Channel $channel;
-  private ?GuildMember $member;
-
-  private Language $lng;
-
-  private array $settings;
-  private array $perm;
-
-  public function __construct(Message|MessageCreate|MessageUpdate $message, Language $lng, array $settings, array $perm, Channel $channel, ?GuildMember $member)
-  {
-    $this->message = $message;
-
-    $this->settings = $settings;
-    $this->perm = $perm;
-    $this->lng = $lng;
-    $this->channel = $channel;
-    $this->member = $member;
-  }
+  // Redis
+  private const int     EXPIRATION_SECONDS      = 90;
+  private const int     MAX_GLOBAL_MESSAGES     = 10;
+  private const int     MAX_USER_MESSAGES       = 20;
+  private const int     MAX_MESSAGE_LENGTH      = 75;
+  private const string  KEY_PREFIX              = 'messages:duplicate';
 
   public function process(): PromiseInterface
   {
-    if (!$this->settings['is_' . self::TYPE . '_status'] || mb_strlen($this->message->content) <= $this->settings[self::TYPE . '_start_length']) return reject($this->info(text: 'disable or len <= min'));
-
-    $total_percentage = $this->getCountDuplicate(sentence: $this->message->content, percent: $this->settings[self::TYPE . '_percent'], count: $this->settings[self::TYPE . '_word_count'], min_length: $this->settings[self::TYPE . '_start_length']);
-    if ($total_percentage < $this->settings[self::TYPE . '_percent']) return reject($this->info(text: 'no duplicate'));
-
-    // вынести getIgnoredPermissions в MessageProcessor
-    if (getIgnoredPermissions(perm: $this->perm, message: $this->message, member: $this->member, parent_id: $this->channel->parent_id, selection: self::TYPE)) {
-      return reject($this->info(text: 'ignored perm'));
+    if (!$this->rule['is_enabled'] || $this->isIgnoredPerm()) {
+      return $this->sendReject(type: self::TYPE, text: 'Skipped');
     }
 
-    return resolve([
-      'module' => self::TYPE,
-      'logReason' => $this->lng->trans('embed.reason.duplicate-reason', ['%percent%' => $this->settings[self::TYPE . '_percent']]),
-      'timeoutReason' => $this->lng->trans('embed.reason.duplicate'),
-      'deleteReason' => $this->lng->trans('delete.' . self::TYPE)
-    ]);
+    if (empty($this->message->content)) return $this->sendReject(type: self::TYPE, text: "No text content");
+
+    return $this->analyzeText($this->message->content, 'Initial');
+  }
+
+  public function filters(): array
+  {
+    return [
+      'main' => [
+        fn() => $this->processLazyWords(),
+        fn() => $this->processLazyGlobalWords(),
+      ],
+    ];
+  }
+
+  public function processLazyWords(): PromiseInterface
+  {
+    return $this->processLazy(isGlobal: false, label: 'Lazy Words');
+  }
+
+  public function processLazyGlobalWords(): PromiseInterface
+  {
+    return $this->processLazy(isGlobal: true, label: 'Lazy Global Words');
+  }
+
+  private function processLazy(bool $isGlobal, string $label): PromiseInterface
+  {
+    if (!$this->rule['is_enabled'] || $this->isIgnoredPerm()) {
+      return $this->sendReject(type: self::TYPE, text: "Skipped {$label}");
+    }
+
+    $this->addMessageInRedis($this->message->content, $isGlobal);
+    $data = $this->getWordsData($isGlobal);
+    $text = $this->getAllWordsAsString($data);
+
+    if (empty($text)) return $this->sendReject(type: self::TYPE, text: "No {$label} Text");
+
+    return $this->analyzeText(
+      message: $text,
+      label: $label,
+      isLazy: true,
+      lazyIds: $this->getMessageIds($data),
+      isGlobal: $isGlobal
+    );
+  }
+
+  private function isIgnoredPerm(): bool
+  {
+    return getIgnoredPermissions(
+      perm: $this->permissions,
+      message: $this->message,
+      parent_id: $this->channel->parent_id,
+      member: $this->member,
+      selection: self::TYPE
+    );
   }
 
   private function findWordDuplicates(string $sentence, int $start_count): float
@@ -120,8 +141,68 @@ final class Duplicate
     return $symbols;
   }
 
-  private function info(string $text): RuntimeException
+  private function addMessageInRedis(string $message, bool $isGlobal = false): void
   {
-    return new RuntimeException(self::TYPE . ' | ' . $text);
+    if (mb_strlen($message) > self::MAX_MESSAGE_LENGTH) return;
+
+    $key = $this->getRedisKey($isGlobal);
+
+    if (await($this->redis->llen($key)) > ($isGlobal ? self::MAX_GLOBAL_MESSAGES : self::MAX_USER_MESSAGES)) $this->redis->lpop($key);
+
+    $this->redis->rpush($key, json_encode(['message' => $message, 'id' => $this->message->id]));
+    $this->redis->expire($key, self::EXPIRATION_SECONDS);
+  }
+
+  private function getRedisKey(bool $isGlobal): string
+  {
+    $base = self::KEY_PREFIX . ":{$this->channel->guild_id}:{$this->message->channel_id}";
+    return $isGlobal
+      ? $base
+      : "{$base}:{$this->message->author->id}";
+  }
+
+  private function getWordsData(bool $isGlobal = false): array
+  {
+    $key = $this->getRedisKey($isGlobal);
+    return await($this->redis->lrange($key, 0, -1)) ?? [];
+  }
+
+  private function getAllWordsAsString(array $data): string
+  {
+    return implode(' ', array_map(static fn($json) => json_decode($json, true)['message'], $data));
+  }
+
+  private function getMessageIds(array $data): array
+  {
+    return array_map(static fn($json) => json_decode($json, true)['id'], $data);
+  }
+
+  private function analyzeText(string $message, string $label, bool $isLazy = false, array $lazyIds = [], bool $isGlobal = false): PromiseInterface
+  {
+    $total_percentage = $this->getCountDuplicate(
+      sentence: $message,
+      percent: $this->rule['options']['percent'],
+      count: $this->rule['options']['word_count'],
+      min_length: $this->rule['options']['min_length']
+    );
+    if ($total_percentage < $this->rule['options']['percent']) return $this->sendReject(type: self::TYPE, text: "No Duplicate in {$label}");
+
+    if ($isLazy) $this->clearAllWords($isGlobal);
+
+    return resolve([
+      'module' => self::TYPE,
+      'logReason' => $this->lng->trans('embed.reason.duplicate-reason', ['%percent%' => $this->rule['options']['percent']]),
+      'timeoutReason' => $this->lng->trans('embed.reason.duplicate'),
+      'deleteReason' =>  $this->lng->trans('delete.' . self::TYPE),
+      'type' => strtolower($label),
+      'isLazy' => $isLazy,
+      'lazyIds' => $lazyIds,
+      'message' => $message
+    ]);
+  }
+
+  private function clearAllWords(bool $isGlobal = false): void
+  {
+    $this->redis->del($this->getRedisKey($isGlobal));
   }
 }

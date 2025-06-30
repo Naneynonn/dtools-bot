@@ -255,6 +255,27 @@ await(
               ->setRequired(true)
           )
       )
+      ->addOption(
+        CommandOptionBuilder::new()
+          ->setName('invite')
+          ->setDescription('Invite Filter')
+          ->setDescriptionLocalizations([
+            'ru' => 'Фильтр инвайтов',
+            'uk' => 'Фільтр інвайтів'
+          ])
+          ->setType(ApplicationCommandOptionType::SUB_COMMAND)
+          ->addOption(
+            CommandOptionBuilder::new()
+              ->setName('enable')
+              ->setDescription('Enable/disable invite filter')
+              ->setDescriptionLocalizations([
+                'ru' => 'Включить/выключить фильтр инвайтов',
+                'uk' => 'Увімкнути/вимкнути фільтр інвайтів'
+              ])
+              ->setType(ApplicationCommandOptionType::BOOLEAN)
+              ->setRequired(true)
+          )
+      )
       ->setType(ApplicationCommandTypes::CHAT_INPUT)
   )
 );

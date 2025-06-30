@@ -57,6 +57,12 @@ class Automod extends CommandHelper
     $this->handle(command: $command);
   }
 
+  #[SubCommand(name: 'invite')]
+  public function invite(CommandInteraction $command): void
+  {
+    $this->handle(command: $command);
+  }
+
   public function handle(CommandInteraction $command): void
   {
     $interaction = $command->interaction;
@@ -118,6 +124,10 @@ class Automod extends CommandHelper
 
     if ($command->hasOption('duplicate')) {
       $this->toggleCommand(command: $command, interaction: $interaction, model: $model, type: 'duplicate');
+    }
+
+    if ($command->hasOption('invite')) {
+      $this->toggleCommand(command: $command, interaction: $interaction, model: $model, type: 'invite');
     }
 
     $model->close();
