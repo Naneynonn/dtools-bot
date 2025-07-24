@@ -179,6 +179,10 @@ final class Duplicate extends AbstractFilter
 
   private function analyzeText(string $message, string $label, bool $isLazy = false, array $lazyIds = [], bool $isGlobal = false): PromiseInterface
   {
+    if (empty($this->rule['options']['percent'])) {
+      echo $this->settings['server_id'] . PHP_EOL;
+    }
+
     $total_percentage = $this->getCountDuplicate(
       sentence: $message,
       percent: $this->rule['options']['percent'],
