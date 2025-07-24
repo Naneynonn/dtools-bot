@@ -72,6 +72,7 @@ embed:
     err: Данного языка не существует.
     set: Вы успешно установили новый язык.
   sticker-name: "Стикер: %sticker%"
+  image-name: "Изображение: %image%"
   empty:
     field: Поле не может быть пустым
   purge:

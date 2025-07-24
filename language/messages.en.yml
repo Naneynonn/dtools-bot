@@ -89,6 +89,7 @@ embed:
     err: This language does not exist.
     set: You have successfully set a new language
   sticker-name: "Sticker: %sticker%"
+  image-name: "Image: %image%"
   empty:
     field: Field cannot be empty
   purge:
