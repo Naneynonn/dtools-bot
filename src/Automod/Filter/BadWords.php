@@ -35,7 +35,7 @@ final class Badwords extends AbstractFilter
   private const string  KEY_PREFIX              = 'messages:badwords';
 
   // Badwords API
-  private const string  API_URL                 = 'https://api.discord.band/v1/badwords';
+  private const string  API_URL                 = 'https://api.discordtools.cc/v2/badwords';
   private const string  API_USER_AGENT          = 'DTools-Bot/1.0 (+https://discordtools.cc)';
   private const string  API_CONTENT_TYPE        = 'application/json';
   private const int     BADWORDS_TYPE_TEXT      = 1;
@@ -54,7 +54,7 @@ final class Badwords extends AbstractFilter
 
     if (empty($this->message->content)) return $this->sendReject(type: self::TYPE, text: "No text content");
 
-    return $this->analyzeText($this->message->content, 'Initial');
+    return $this->analyzeText(message: $this->message->content, label: 'Initial');
   }
 
   public function filters(): array
@@ -116,7 +116,7 @@ final class Badwords extends AbstractFilter
     foreach ($this->message->sticker_items ?? [] as $sticker) {
       $text = $this->lng->trans('embed.sticker-name', ['%sticker%' => $sticker->name]) ?? '';
       if (!empty($text)) {
-        return $this->analyzeText($text, 'sticker');
+        return $this->analyzeText(message: $text, label: 'sticker');
       }
     }
 
@@ -132,8 +132,9 @@ final class Badwords extends AbstractFilter
     if (!empty($this->message->attachments)) {
       foreach ($this->message->attachments as $attachment) {
         $text = $this->extractTextFromImage($attachment->url ?? '');
+        $text = $this->lng->trans('embed.image-name', ['%image%' => $text]);
         if (!empty($text)) {
-          return $this->analyzeText($text, 'Image');
+          return $this->analyzeText(message: $text, label: 'image');
         }
       }
     }
@@ -141,8 +142,9 @@ final class Badwords extends AbstractFilter
     if (!empty($this->message->embeds)) {
       foreach ($this->message->embeds as $embed) {
         $text = $this->extractTextFromImage($embed->thumbnail->url ?? '');
+        $text = $this->lng->trans('embed.image-name', ['%image%' => $text]);
         if (!empty($text)) {
-          return $this->analyzeText($text, 'Image');
+          return $this->analyzeText(message: $text, label: 'image');
         }
       }
     }
@@ -158,8 +160,8 @@ final class Badwords extends AbstractFilter
       skipTypes: $this->rule['options']['exclusion_flags'] ?? 0
     );
 
-    if (!isset($result['badwords']) || !$result['badwords']) {
-      return $this->sendReject(type: self::TYPE, text: "No Badwords in $label");
+    if (!isset($result['match']) || !$result['match']) {
+      return $this->sendReject(type: self::TYPE, text: "No Badwords in {$label}");
     }
 
     if ($isLazy) $this->clearAllWords($isGlobal);
@@ -219,14 +221,14 @@ final class Badwords extends AbstractFilter
       : "{$base}:{$this->message->author->id}";
   }
 
-  private function fetchBadWords(string $message, string $skip, ?int $skipTypes = null): ?array
+  private function fetchBadWords(string $message, array $skip, int $skipTypes = 0): ?array
   {
     $client = new Browser();
     $body = json_encode([
       'message' => $message,
       'type' => self::BADWORDS_TYPE_TEXT,
-      'skip' => $skip,
-      'skipTypes' => $skipTypes
+      'skip_words' => $skip,
+      'skip_flags' => $skipTypes
     ], JSON_UNESCAPED_UNICODE);
 
     try {
@@ -251,8 +253,8 @@ final class Badwords extends AbstractFilter
   {
     $lng = $this->lng;
 
-    if (!is_null($result['bad_type'])) {
-      $decoded = $this->decodeConditions($result['bad_type']);
+    if (!is_null($result['type'])) {
+      $decoded = $this->decodeConditions($result['type']);
       return [$decoded['list'], $decoded['message']];
     }
 
@@ -293,10 +295,19 @@ final class Badwords extends AbstractFilter
     ];
   }
 
-  private function getSkipWords(): string
+  // private function getSkipWords(): array
+  // {
+  //   $skip = $this->model->getBadWordsExeption($this->channel->guild_id);
+  //   return empty($skip)
+  //     ? []
+  //     : implode(', ', array_column($skip, 'word'));
+  // }
+  private function getSkipWords(): array
   {
     $skip = $this->model->getBadWordsExeption($this->channel->guild_id);
-    return empty($skip) ? '' : implode(', ', array_column($skip, 'word'));
+    return empty($skip)
+      ? []
+      : array_column($skip, 'word');
   }
 
   private function isIgnoredPerm(): bool
