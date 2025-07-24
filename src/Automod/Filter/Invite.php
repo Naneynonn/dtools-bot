@@ -43,19 +43,24 @@ final class Invite extends AbstractFilter
 
   private function checkInvite(string $sentence): bool
   {
-    $normalized = strtolower($sentence);
-
-    // Убираем пробелы, точки, подчёркивания, дефисы, слэши — чтобы словить обходы
-    $compressed = preg_replace('/[\s\.\-_\/\\\]+/', '', $normalized);
-
-    $patterns = [
-      '~discord(gg|cominvite|appcominvite)[a-z0-9]{2,32}~i',
-      '~\.gg\/?[a-z0-9-]{2,32}~i',
+    $texts = [
+      $normalized = strtolower($sentence),
+      preg_replace('/[\s.\-_\/\\\\]+/', '', $normalized)
     ];
 
-    foreach ($patterns as $pattern) {
-      if (preg_match($pattern, $normalized) || preg_match($pattern, $compressed)) {
-        return true;
+    $allowed = $this->rule['options']['allowed'] ?? [];
+
+    foreach ($texts as $text) {
+      if (preg_match('~discord(?:gg|cominvite|appcominvite)([a-z0-9]{2,32})~i', $text, $m)) {
+        if (!in_array(strtolower($m[1]), $allowed, true)) {
+          return true;
+        }
+      }
+
+      if (preg_match('~(?:^|[^a-z0-9])\.gg/([a-z0-9-]{2,32})~i', $text, $m)) {
+        if (!in_array(strtolower($m[1]), $allowed, true)) {
+          return true;
+        }
       }
     }
 
