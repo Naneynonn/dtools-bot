@@ -359,56 +359,110 @@ final class Badwords extends AbstractFilter
     }
   }
 
+  // private function preprocessImage(string $path): string
+  // {
+  //   $image = new Imagick($path);
+
+  //   // Преобразование изображения в оттенки серого
+  //   $image->setImageColorspace(Imagick::COLORSPACE_GRAY);
+
+  //   // Увеличение резкости
+  //   $image->sharpenImage(2, 1);
+
+  //   // Удаление крапинок и мелких артефактов
+  //   // $image->despeckleImage();
+
+  //   // Применение медианного фильтра для уменьшения шума
+  //   // $image->statisticImage(Imagick::STATISTIC_MEDIAN, 3, 3);
+
+  //   // Применение адаптивного размытия
+  //   // $image->adaptiveBlurImage(1, 1);
+
+  //   // // Дополнительный этап размытия для сглаживания оставшихся шумов
+  //   // $image->gaussianBlurImage(0.5, 0.5);
+
+  //   // // Дополнительное увеличение контраста для улучшения четкости текста
+  //   // $image->contrastImage(true);
+
+  //   // Сохранение обработанного изображения во временный файл
+  //   $processedPath = tempnam(sys_get_temp_dir(), self::TEMP_PREFIX_PROCESSED) . '.png';
+  //   $image->writeImage($processedPath);
+
+  //   // Дополнительное сохранение обработанного изображения для отладки
+  //   // $debugPath = '/root/bots/discordtools-dev/processed_' . uniqid() . '.png';
+  //   // $image->writeImage($debugPath);
+
+  //   $image->destroy();
+
+  //   return $processedPath;
+  // }
   private function preprocessImage(string $path): string
   {
     $image = new Imagick($path);
 
-    // Преобразование изображения в оттенки серого
+    // Увеличиваем маленькие изображения в 2 раза
+    if ($image->getImageWidth() < 1200) {
+      $image->resizeImage(
+        $image->getImageWidth() * 2,
+        $image->getImageHeight() * 2,
+        Imagick::FILTER_LANCZOS,
+        1
+      );
+    }
+
     $image->setImageColorspace(Imagick::COLORSPACE_GRAY);
+    $image->autoLevelImage();
+    $image->unsharpMaskImage(0, 1, 1, 0.05);
+    $image->borderImage('white', 10, 10);
+    $image->setImageResolution(300, 300);
+    $image->setImageFormat('png');
 
-    // Увеличение резкости
-    $image->sharpenImage(2, 1);
+    $processedPath =
+      tempnam(sys_get_temp_dir(), self::TEMP_PREFIX_PROCESSED) . '.png';
 
-    // Удаление крапинок и мелких артефактов
-    // $image->despeckleImage();
-
-    // Применение медианного фильтра для уменьшения шума
-    // $image->statisticImage(Imagick::STATISTIC_MEDIAN, 3, 3);
-
-    // Применение адаптивного размытия
-    // $image->adaptiveBlurImage(1, 1);
-
-    // // Дополнительный этап размытия для сглаживания оставшихся шумов
-    // $image->gaussianBlurImage(0.5, 0.5);
-
-    // // Дополнительное увеличение контраста для улучшения четкости текста
-    // $image->contrastImage(true);
-
-    // Сохранение обработанного изображения во временный файл
-    $processedPath = tempnam(sys_get_temp_dir(), self::TEMP_PREFIX_PROCESSED) . '.png';
     $image->writeImage($processedPath);
-
-    // Дополнительное сохранение обработанного изображения для отладки
-    // $debugPath = '/root/bots/discordtools-dev/processed_' . uniqid() . '.png';
-    // $image->writeImage($debugPath);
-
+    $image->clear();
     $image->destroy();
 
     return $processedPath;
   }
 
+  // private function recognizeText(string $path): string
+  // {
+  //   foreach (self::OCR_PSM_MODES as $psm) {
+  //     try {
+  //       $text = (new TesseractOCR($path))->lang(self::OCR_LANGUAGES)->psm($psm)->run();
+  //       if (!empty($text)) return $text;
+  //     } catch (\Throwable $th) {
+  //       // echo 'Err recognize text with PSM ' . $psm . ': ' . $th->getMessage(), PHP_EOL;
+  //     }
+  //   }
+
+  //   // echo 'Err: Tesseract did not produce any output with any PSM.' . PHP_EOL;
+  //   return '';
+  // }
   private function recognizeText(string $path): string
   {
+    $results = [];
+
     foreach (self::OCR_PSM_MODES as $psm) {
       try {
-        $text = (new TesseractOCR($path))->lang(self::OCR_LANGUAGES)->psm($psm)->run();
-        if (!empty($text)) return $text;
-      } catch (\Throwable $th) {
-        // echo 'Err recognize text with PSM ' . $psm . ': ' . $th->getMessage(), PHP_EOL;
+        $text = (new TesseractOCR($path))
+          ->lang('rus', 'ukr', 'eng')
+          ->oem(1)
+          ->psm($psm)
+          ->dpi(300)
+          ->run();
+
+        $text = trim($text);
+
+        if ($text !== '') {
+          $results[] = $text;
+        }
+      } catch (Throwable) {
       }
     }
 
-    // echo 'Err: Tesseract did not produce any output with any PSM.' . PHP_EOL;
-    return '';
+    return implode("\n", array_unique($results));
   }
 }

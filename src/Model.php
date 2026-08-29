@@ -156,4 +156,40 @@ class Model
 
     return $sql->fetch();
   }
+
+  public function ensureFilterOptions(string $server_id, string $type, bool $is_enabled): void
+  {
+    $defaultOptions = [
+      'badwords'  => ['exclusion_flags' => 0],
+      'caps'      => ['min_length' => 3, 'percent' => 70],
+      'duplicate' => ['percent' => 50, 'min_length' => 3, 'word_count' => 3],
+      'replace'   => [],
+      'zalgo'     => [],
+      'russian'   => [],
+      'invite'    => ['allowed' => []],
+    ];
+
+    if (!isset($defaultOptions[$type])) {
+      return;
+    }
+
+    $json = json_encode($defaultOptions[$type], JSON_THROW_ON_ERROR);
+
+    $sql = $this->db->prepare("
+    INSERT INTO automod_rules (server_id, type, options, is_enabled)
+    VALUES (:server_id, :type, :options::jsonb, :is_enabled)
+    ON CONFLICT (server_id, type)
+    DO UPDATE SET
+      options = COALESCE(EXCLUDED.options, '{}'::jsonb)
+                || COALESCE(automod_rules.options, '{}'::jsonb),
+      is_enabled = EXCLUDED.is_enabled
+  ");
+
+    $sql->bindValue(':server_id', $server_id, PDO::PARAM_STR);
+    $sql->bindValue(':type', $type, PDO::PARAM_STR);
+    $sql->bindValue(':options', $json, PDO::PARAM_STR);
+    $sql->bindValue(':is_enabled', (int)$is_enabled, PDO::PARAM_INT);
+
+    $sql->execute();
+  }
 }

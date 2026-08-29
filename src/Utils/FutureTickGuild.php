@@ -53,12 +53,15 @@ class FutureTickGuild implements BufferInterface
   public function partialMessage(string $partial): void
   {
     if (str_contains($partial, Events::GUILD_CREATE)) {
-      $this->redis->lpush($this->queueKey, $partial);
+      $this->redis->lpush($this->queueKey, $partial)->then(function () {
+        $this->redis->expire($this->queueKey, 120); // TTL: 2 минуты
+      });
       return;
     }
 
     ($this->completeHandler)($partial);
   }
+
 
   public function onCompleteMessage(Closure $handler): void
   {

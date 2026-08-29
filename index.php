@@ -16,7 +16,43 @@ use Naneynonn\Language;
 use Clue\React\Redis\RedisClient;
 use React\EventLoop\Loop;
 
+use function React\Promise\set_rejection_handler;
+
 require './vendor/autoload.php';
+
+// 1️⃣ Необработанные Promise rejections (async/then)
+set_rejection_handler(static function (Throwable $e): void {
+  echo PHP_EOL;
+  echo "[PROMISE][UNHANDLED] " . $e::class . PHP_EOL;
+  echo $e->getMessage() . PHP_EOL;
+  echo $e->getTraceAsString() . PHP_EOL;
+  echo str_repeat("-", 80) . PHP_EOL;
+});
+
+// 2️⃣ Необработанные синхронные исключения
+set_exception_handler(static function (Throwable $e): void {
+  echo PHP_EOL;
+  echo "[EXCEPTION][FATAL] " . $e::class . PHP_EOL;
+  echo $e->getMessage() . PHP_EOL;
+  echo $e->getTraceAsString() . PHP_EOL;
+  echo str_repeat("=", 80) . PHP_EOL;
+
+  Loop::stop();
+});
+
+// 3️⃣ Warnings / Notices
+set_error_handler(static function (int $severity, string $message, string $file, int $line): bool {
+  if (!(error_reporting() & $severity)) {
+    return false;
+  }
+
+  echo PHP_EOL;
+  echo "[PHP ERROR][{$severity}] {$message}" . PHP_EOL;
+  echo "File: {$file}:{$line}" . PHP_EOL;
+  echo str_repeat("-", 80) . PHP_EOL;
+
+  return false; // пусть PHP продолжит стандартное поведение
+});
 
 $shardId = isset($argv[1]) ? (int)$argv[1] : null;
 $numShards = isset($argv[2]) ? (int)$argv[2] : null;

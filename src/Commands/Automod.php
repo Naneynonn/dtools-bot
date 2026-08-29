@@ -147,6 +147,7 @@ class Automod extends CommandHelper
     }
 
     $model->automodToggleCommands(server_id: $interaction->guild_id, is_enable: $value, type: $type);
+    $model->ensureFilterOptions(server_id: $interaction->guild_id, type: $type, is_enabled: $value);
     $this->sendMessage(command: $command, embed: Embeds::response(color: $color, title: $title));
   }
 }
