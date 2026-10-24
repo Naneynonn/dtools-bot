@@ -1,17 +1,17 @@
 {
   "require": {
     "gabrielelana/byte-units": "^0.5.0",
-    "symfony/translation": "^7.1",
-    "symfony/yaml": "^7.1",
+    "symfony/translation": "^8.1",
+    "symfony/yaml": "^8.1",
     "woeler/phpdiscord": "^4.0",
-    "symfony/intl": "^7.1",
+    "symfony/intl": "^8.1",
     "monolog/monolog": "^3.5",
     "react/http": "^1.11.0",
     "clue/redis-react": "^3@dev",
     "thiagoalessio/tesseract_ocr": "^2.13",
     "react/filesystem": "^0.2@dev",
     "wyrihaximus/react-cron": "^5.0",
-    "exan/fenrir": "dev-feature/compression-buffer@dev"
+    "exan/fenrir": "^1.1"
   },
   "autoload": {
     "psr-4": {
